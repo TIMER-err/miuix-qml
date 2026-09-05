@@ -8,6 +8,7 @@ Item {
     property bool indeterminate: false
     property string text: ""
     property bool enabled: true
+    property bool toggleOnClick: true
     readonly property bool _visualChecked: checked || indeterminate
     signal clicked()
 
@@ -49,8 +50,10 @@ Item {
                 anchors.fill: parent
                 enabled: control.enabled
                 onClicked: {
-                    control.checked = !control.checked
-                    control.indeterminate = false
+                    if (control.toggleOnClick) {
+                        control.checked = !control.checked
+                        control.indeterminate = false
+                    }
                     control.clicked()
                 }
             }
@@ -66,8 +69,10 @@ Item {
                 anchors.fill: parent
                 enabled: control.enabled
                 onClicked: {
-                    control.checked = !control.checked
-                    control.indeterminate = false
+                    if (control.toggleOnClick) {
+                        control.checked = !control.checked
+                        control.indeterminate = false
+                    }
                     control.clicked()
                 }
             }

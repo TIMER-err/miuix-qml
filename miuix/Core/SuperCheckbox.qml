@@ -31,9 +31,10 @@ Item {
             Layout.preferredWidth: 26
             Layout.preferredHeight: 26
             checked: control.checked
+            toggleOnClick: false
             enabled: control.enabled
             onClicked: {
-                control.checked = checked
+                control.checked = !control.checked
                 control.clicked()
             }
         }

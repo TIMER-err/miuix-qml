@@ -9,6 +9,7 @@ Item {
     property bool enabled: true
     property bool showIcon: false
     property string icon: "check"
+    property bool toggleOnClick: true
 
     signal clicked()
 
@@ -60,7 +61,7 @@ Item {
                 anchors.fill: parent
                 enabled: control.enabled
                 onClicked: {
-                    control.checked = !control.checked
+                    if (control.toggleOnClick) control.checked = !control.checked
                     control.clicked()
                 }
             }
@@ -79,7 +80,7 @@ Item {
                 anchors.fill: parent
                 enabled: control.enabled
                 onClicked: {
-                    control.checked = !control.checked
+                    if (control.toggleOnClick) control.checked = !control.checked
                     control.clicked()
                 }
             }
