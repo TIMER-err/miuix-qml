@@ -1,0 +1,76 @@
+import QtQuick
+import QtQuick.Layouts
+import miuix.Core
+Item {
+    id: control
+
+    property bool checked: false
+    property bool indeterminate: false
+    property string text: ""
+    property bool enabled: true
+    readonly property bool _visualChecked: checked || indeterminate
+    signal clicked()
+
+    property var _colors: Theme.color
+
+    implicitWidth: rowLayout.implicitWidth
+    implicitHeight: Math.max(26, rowLayout.implicitHeight)
+
+    RowLayout {
+        id: rowLayout
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.left: parent.left
+        spacing: 12
+
+        Rectangle {
+            implicitWidth: 26
+            implicitHeight: 26
+            width: 26
+            height: 26
+            radius: 13
+            color: {
+                if (!control.enabled)
+                    return control._visualChecked ? _colors.disabledPrimary : _colors.secondaryContainer
+                return control._visualChecked ? _colors.primary : _colors.secondary
+            }
+            Behavior on color { ColorAnimation { duration: 180; easing.type: Easing.OutCubic } }
+
+            Text {
+                anchors.centerIn: parent
+                text: control.indeterminate ? "remove" : "check"
+                font.family: Theme.iconFont.name
+                font.pixelSize: 16
+                color: control.enabled ? _colors.onPrimary : _colors.disabledOnPrimary
+                opacity: control._visualChecked ? 1 : 0
+                Behavior on opacity { NumberAnimation { duration: 80 } }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                enabled: control.enabled
+                onClicked: {
+                    control.checked = !control.checked
+                    control.indeterminate = false
+                    control.clicked()
+                }
+            }
+        }
+
+        Text {
+            text: control.text
+            visible: control.text.length > 0
+            font.family: Theme.typography.labelLarge.family
+            font.pixelSize: 17
+            color: control.enabled ? _colors.onSurfaceColor : _colors.disabledOnSecondaryVariant
+            MouseArea {
+                anchors.fill: parent
+                enabled: control.enabled
+                onClicked: {
+                    control.checked = !control.checked
+                    control.indeterminate = false
+                    control.clicked()
+                }
+            }
+        }
+    }
+}
