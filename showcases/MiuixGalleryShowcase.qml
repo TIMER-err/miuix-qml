@@ -1,15 +1,30 @@
 import QtQuick
 import miuix.Core
 
-Rectangle {
+Scaffold {
     id: root
     x: 0
     y: 0
-    color: Theme.color.surface
+    containerColor: Theme.color.surface
 
-        Flickable {
+    property int taps: 0
+
+    topBar: Component {
+        TopAppBar {
+            title: "MIUIX"
+            showNavigationIcon: false
+        }
+    }
+
+    floatingActionButton: Component {
+        FAB { icon: "add" }
+    }
+
+    Flickable {
         id: scroller
         anchors.fill: parent
+        anchors.topMargin: root.contentTopPadding
+        anchors.bottomMargin: root.contentBottomPadding
         contentWidth: width
         contentHeight: col.height + 24
         clip: true
@@ -22,12 +37,6 @@ Rectangle {
             y: 0
             width: root.width
             spacing: 0
-
-            TopAppBar {
-                width: parent.width
-                title: "MIUIX"
-                showNavigationIcon: false
-            }
 
             Item { width: 1; height: 8 }
 
@@ -101,6 +110,58 @@ Rectangle {
                     from: 0
                     to: 100
                     value: 42
+                }
+            }
+
+            SmallTitle { text: "Surface"; width: parent.width }
+
+            Row {
+                x: 16
+                width: parent.width - 32
+                spacing: 12
+
+                Surface {
+                    width: (parent.width - 24) / 3
+                    height: 64
+                    radius: 16
+                    color: Theme.color.surfaceContainer
+                    Text {
+                        anchors.centerIn: parent
+                        text: "plain"
+                        font.pixelSize: 14
+                        color: Theme.color.onSurfaceContainer
+                    }
+                }
+
+                Surface {
+                    width: (parent.width - 24) / 3
+                    height: 64
+                    radius: 16
+                    color: Theme.color.surfaceContainer
+                    borderWidth: 1
+                    borderColor: Theme.color.outline
+                    Text {
+                        anchors.centerIn: parent
+                        text: "border"
+                        font.pixelSize: 14
+                        color: Theme.color.onSurfaceContainer
+                    }
+                }
+
+                Surface {
+                    width: (parent.width - 24) / 3
+                    height: 64
+                    radius: 16
+                    color: Theme.color.surfaceContainer
+                    shadowElevation: 4
+                    clickable: true
+                    onClicked: root.taps = root.taps + 1
+                    Text {
+                        anchors.centerIn: parent
+                        text: "taps " + root.taps
+                        font.pixelSize: 14
+                        color: Theme.color.onSurfaceContainer
+                    }
                 }
             }
 

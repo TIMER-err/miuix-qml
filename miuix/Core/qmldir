@@ -1,4 +1,6 @@
 singleton Theme 1.0 Theme.qml
+Surface 1.0 Surface.qml
+Scaffold 1.0 Scaffold.qml
 ScrollBar 1.0 ScrollBar.qml
 ToolTip 1.0 ToolTip.qml
 TopAppBar 1.0 TopAppBar.qml
