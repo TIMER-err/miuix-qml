@@ -21,6 +21,9 @@ Item {
     property int _selectedCol: 0
     property real _alpha: 1
     property bool _syncing: false
+    property real _pressX: 0
+    property real _pressY: 0
+    property bool _picking: false
 
     readonly property int _totalColumns: hueColumns + (includeGrayColumn ? 1 : 0)
 
@@ -241,9 +244,13 @@ Item {
                 }
             }
 
+            // A tap picks; dragging picks only once the gesture is horizontal. Pressing
+            // alone must not change the color, or scrolling the page through the grid
+            // repaints it -- the same rule the sliders follow.
             MouseArea {
+                id: gridArea_mouse
                 anchors.fill: parent
-                preventStealing: true
+                preventStealing: colorPaletteRoot._picking
 
                 function _pick(mouseX, mouseY) {
                     var col = Math.floor(mouseX / gridArea.width * colorPaletteRoot._totalColumns)
@@ -251,11 +258,31 @@ Item {
                     colorPaletteRoot._select(row, col)
                 }
 
-                onPressed: (mouse) => _pick(mouse.x, mouse.y)
+                onPressed: (mouse) => {
+                    colorPaletteRoot._pressX = mouse.x
+                    colorPaletteRoot._pressY = mouse.y
+                    colorPaletteRoot._picking = false
+                }
                 onPositionChanged: (mouse) => {
                     if (!pressed) return
+                    if (!colorPaletteRoot._picking) {
+                        var dx = mouse.x - colorPaletteRoot._pressX
+                        var dy = mouse.y - colorPaletteRoot._pressY
+                        if (Math.abs(dx) < 8 || Math.abs(dx) <= Math.abs(dy)) return
+                        colorPaletteRoot._picking = true
+                    }
                     _pick(mouse.x, mouse.y)
                 }
+                onReleased: (mouse) => {
+                    // A tap that never became a drag still selects.
+                    if (!colorPaletteRoot._picking
+                            && Math.abs(mouse.x - colorPaletteRoot._pressX) < 8
+                            && Math.abs(mouse.y - colorPaletteRoot._pressY) < 8) {
+                        _pick(mouse.x, mouse.y)
+                    }
+                    colorPaletteRoot._picking = false
+                }
+                onCanceled: colorPaletteRoot._picking = false
             }
         }
 
