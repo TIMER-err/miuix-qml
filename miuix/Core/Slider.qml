@@ -31,8 +31,9 @@ Item {
     property real _thumbRadius: height / 2
     property real _centerX: _thumbRadius + _fraction * Math.max(0, width - 2 * _thumbRadius)
     property real _thumbScale: (mouseArea.pressed || mouseArea.containsMouse) ? 1.127 : 1
-    property bool _proxyDragActive: false
-    property real _proxyDragStartValue: 0
+    property real _pressX: 0
+    property real _pressY: 0
+    property bool _dragActive: false
 
     function setValue(v) {
         var newValue = Math.max(from, Math.min(to, v))
@@ -51,17 +52,6 @@ Item {
         var avail = Math.max(1, width - 2 * _thumbRadius)
         var f = Math.max(0, Math.min(1, (px - _thumbRadius) / avail))
         return from + f * _range
-    }
-
-    Item {
-        id: dragProxy
-        x: 0
-        visible: false
-        onXChanged: {
-            if (!control._proxyDragActive) return
-            var avail = Math.max(1, control.width - 2 * control._thumbRadius)
-            control.setValue(control._proxyDragStartValue + x / avail * control._range)
-        }
     }
 
     Item {
@@ -94,30 +84,41 @@ Item {
         }
     }
 
+    // Upstream drives the track with draggable(Orientation.Horizontal): the value
+    // follows only once the gesture is a horizontal drag, so a press -- or a page
+    // scroll that happens to start on the slider -- leaves it alone.
+    //
+    // Deliberately no drag.target: a MouseArea that drags its own target keeps the
+    // gesture for good, which stopped an enclosing Flickable from ever scrolling
+    // when the finger landed on a slider.
     MouseArea {
         id: mouseArea
         anchors.fill: parent
         enabled: control.enabled
         hoverEnabled: true
-        preventStealing: true
-        drag.target: dragProxy
-        drag.axis: "XAxis"
-        drag.minimumX: -100000
-        drag.maximumX: 100000
+        // Open at press so a vertical flick still scrolls the page; closed once this
+        // is a horizontal drag, so drifting off-axis cannot hand it to the Flickable.
+        preventStealing: control._dragActive
+
         onPressed: (mouse) => {
+            control._pressX = mouse.x
+            control._pressY = mouse.y
+            control._dragActive = false
+        }
+        onPositionChanged: (mouse) => {
+            if (!pressed) return
+            if (!control._dragActive) {
+                var dx = mouse.x - control._pressX
+                var dy = mouse.y - control._pressY
+                if (Math.abs(dx) < 8 || Math.abs(dx) <= Math.abs(dy)) return
+                control._dragActive = true
+            }
             control.setValue(control.valueFromX(mouse.x))
-            control._proxyDragStartValue = control.value
-            dragProxy.x = 0
-            control._proxyDragActive = true
         }
         onReleased: {
-            control._proxyDragActive = false
-            dragProxy.x = 0
-            control.editingFinished()
+            if (control._dragActive) control.editingFinished()
+            control._dragActive = false
         }
-        onCanceled: {
-            control._proxyDragActive = false
-            dragProxy.x = 0
-        }
+        onCanceled: control._dragActive = false
     }
 }
