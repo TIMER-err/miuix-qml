@@ -264,11 +264,13 @@ Scaffold {
                 Row {
                     anchors.centerIn: parent
                     spacing: 8
+                    // One-way on purpose: binding `value` back to a property the
+                    // handler also writes makes the two fight.
                     NumberPicker {
                         width: 80
                         height: 225
                         range: [0, 23]
-                        value: root.hourValue
+                        value: 16
                         wrapAround: true
                         label: function(value) { return value < 10 ? "0" + value : "" + value }
                         onValueChanged: root.hourValue = value
@@ -284,7 +286,7 @@ Scaffold {
                         width: 80
                         height: 225
                         range: [0, 59]
-                        value: root.minuteValue
+                        value: 30
                         wrapAround: true
                         label: function(value) { return value < 10 ? "0" + value : "" + value }
                         onValueChanged: root.minuteValue = value
