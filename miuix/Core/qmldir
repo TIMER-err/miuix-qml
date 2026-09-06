@@ -1,9 +1,12 @@
 singleton Theme 1.0 Theme.qml
 Surface 1.0 Surface.qml
 Scaffold 1.0 Scaffold.qml
+Badge 1.0 Badge.qml
+BadgedBox 1.0 BadgedBox.qml
 ScrollBar 1.0 ScrollBar.qml
 ToolTip 1.0 ToolTip.qml
 TopAppBar 1.0 TopAppBar.qml
+FloatingToolbar 1.0 FloatingToolbar.qml
 IconButton 1.0 IconButton.qml
 Ripple 1.0 Ripple.qml
 Checkbox 1.0 Checkbox.qml
@@ -32,6 +35,12 @@ OutlinedBorder 1.0 OutlinedBorder.qml
 NavigationDrawer 1.0 NavigationDrawer.qml
 DatePicker 1.0 DatePicker.qml
 TimePicker 1.0 TimePicker.qml
+NumberPicker 1.0 NumberPicker.qml
+ColorSlider 1.0 ColorSlider.qml
+ColorPicker 1.0 ColorPicker.qml
+ColorPalette 1.0 ColorPalette.qml
+TabRow 1.0 TabRow.qml
+TabRowWithContour 1.0 TabRowWithContour.qml
 CircularProgress 1.0 CircularProgress.qml
 LinearProgress 1.0 LinearProgress.qml
 LoadingIndicator 1.0 LoadingIndicator.qml

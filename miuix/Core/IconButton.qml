@@ -6,6 +6,9 @@ Item {
     property string icon: ""
     property string type: "standard"
     property bool enabled: true
+    // IconButtonDefaults.CornerRadius is 40dp, clamped to a circle at the 40dp
+    // default size.
+    property real cornerRadius: 40
     property bool hovered: enabled && pressArea.containsMouse
     property bool pressed: enabled && pressArea.pressed
     property bool focused: enabled && activeFocus
@@ -36,16 +39,19 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        radius: 20
+        radius: Math.min(control.cornerRadius, Math.min(width, height) / 2)
         color: containerColor
         border.width: type === "outlined" ? 1 : 0
         border.color: _colors.outline
 
+        // MiuixIndication: a flat overlay in onBackground, +0.06 hovered / +0.10
+        // pressed, clipped to the button's own shape.
         Rectangle {
             anchors.fill: parent
             radius: parent.radius
-            color: "#000000"
+            color: _colors.onBackground
             opacity: control.pressed ? 0.10 : (control.hovered ? 0.06 : 0)
+            Behavior on opacity { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
         }
 
         Text {

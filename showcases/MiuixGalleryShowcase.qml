@@ -8,6 +8,17 @@ Scaffold {
     containerColor: Theme.color.surface
 
     property int taps: 0
+    property int tabIndex: 0
+    property int contourTabIndex: 0
+    property int hourValue: 16
+    property int minuteValue: 30
+    property color pickedColor: Theme.color.primary
+    property color paletteColor: Theme.color.primary
+
+    function rgbaText(value) {
+        return "RGBA: " + Math.round(value.r * 255) + ", " + Math.round(value.g * 255)
+            + ", " + Math.round(value.b * 255) + ", " + (Math.round(value.a * 100) / 100)
+    }
 
     topBar: Component {
         TopAppBar {
@@ -29,7 +40,8 @@ Scaffold {
         contentHeight: col.height + 24
         clip: true
         flickableDirection: "VerticalFlick"
-        interactive: !volumeSlider.pressed
+        // No `interactive: !slider.pressed` workaround: Slider now waits for a
+        // horizontal drag, so the Flickable can steal a vertical one from it.
 
         Column {
             id: col
@@ -64,6 +76,45 @@ Scaffold {
                     y: 56
                     title: "Bluetooth"
                     checked: false
+                }
+            }
+
+            SmallTitle { text: "Badge"; width: parent.width }
+
+            // The badge hangs above the anchor's top edge, so the row needs headroom.
+            Item { width: 1; height: 10 }
+
+            Row {
+                x: 16
+                width: parent.width - 32
+                spacing: 24
+
+                BadgedBox {
+                    width: 40
+                    height: 40
+                    badge: Component { Badge {} }
+                    IconButton { anchors.fill: parent; icon: "chat"; type: "standard" }
+                }
+
+                BadgedBox {
+                    width: 40
+                    height: 40
+                    badge: Component { Badge { text: "8" } }
+                    IconButton { anchors.fill: parent; icon: "mail"; type: "standard" }
+                }
+
+                BadgedBox {
+                    width: 40
+                    height: 40
+                    badge: Component { Badge { text: "99+" } }
+                    IconButton { anchors.fill: parent; icon: "settings"; type: "standard" }
+                }
+
+                BadgedBox {
+                    width: 40
+                    height: 40
+                    badge: Component { Badge { text: "5" } }
+                    IconButton { anchors.fill: parent; icon: "favorite"; type: "standard" }
                 }
             }
 
@@ -163,6 +214,120 @@ Scaffold {
                         color: Theme.color.onSurfaceContainer
                     }
                 }
+            }
+
+            SmallTitle { text: "FloatingToolbar"; width: parent.width }
+
+            FloatingToolbar {
+                x: 16
+                width: parent.width - 32
+                // Capsule = height - 2 * outSidePaddingVertical, so 72 leaves a
+                // 56dp bar with 8dp of breathing room around the 40dp buttons.
+                height: 72
+                showDivider: true
+                Row {
+                    anchors.centerIn: parent
+                    spacing: 8
+                    IconButton { width: 40; height: 40; icon: "format_bold"; type: "standard" }
+                    IconButton { width: 40; height: 40; icon: "format_italic"; type: "standard" }
+                    IconButton { width: 40; height: 40; icon: "link"; type: "standard" }
+                    IconButton { width: 40; height: 40; icon: "more_horiz"; type: "standard" }
+                }
+            }
+
+            SmallTitle { text: "TabRow"; width: parent.width }
+
+            TabRow {
+                x: 12
+                width: parent.width - 24
+                tabs: ["Tab 1", "Tab 2", "Tab 3"]
+                selectedTabIndex: root.tabIndex
+                onTabSelected: root.tabIndex = index
+            }
+
+            Item { width: 1; height: 8 }
+
+            TabRowWithContour {
+                x: 12
+                width: parent.width - 24
+                tabs: ["One", "Two", "Three", "Four", "Five", "Six"]
+                selectedTabIndex: root.contourTabIndex
+                onTabSelected: root.contourTabIndex = index
+            }
+
+            SmallTitle { text: "NumberPicker"; width: parent.width }
+
+            Card {
+                x: 12
+                width: parent.width - 24
+                height: 248
+                Row {
+                    anchors.centerIn: parent
+                    spacing: 8
+                    NumberPicker {
+                        width: 80
+                        height: 225
+                        range: [0, 23]
+                        value: root.hourValue
+                        wrapAround: true
+                        label: function(value) { return value < 10 ? "0" + value : "" + value }
+                        onValueChanged: root.hourValue = value
+                    }
+                    Text {
+                        text: ":"
+                        anchors.verticalCenter: parent.verticalCenter
+                        font.pixelSize: 22
+                        font.weight: Font.Bold
+                        color: Theme.color.onSurfaceColor
+                    }
+                    NumberPicker {
+                        width: 80
+                        height: 225
+                        range: [0, 59]
+                        value: root.minuteValue
+                        wrapAround: true
+                        label: function(value) { return value < 10 ? "0" + value : "" + value }
+                        onValueChanged: root.minuteValue = value
+                    }
+                }
+            }
+
+            SmallTitle { text: "ColorPicker"; width: parent.width }
+
+            // Deliberately not inside a Card: Card clips through a layer effect,
+            // which is one of the things being ruled out for the color controls.
+            Text {
+                x: 16
+                text: root.rgbaText(root.pickedColor)
+                font.pixelSize: 14
+                color: Theme.color.onBackground
+            }
+
+            Item { width: 1; height: 8 }
+
+            ColorPicker {
+                x: 16
+                width: parent.width - 32
+                color: Theme.color.primary
+                onColorSelected: (newColor) => root.pickedColor = newColor
+            }
+
+            SmallTitle { text: "ColorPalette"; width: parent.width }
+
+            Text {
+                x: 16
+                text: root.rgbaText(root.paletteColor)
+                font.pixelSize: 14
+                color: Theme.color.onBackground
+            }
+
+            Item { width: 1; height: 8 }
+
+            ColorPalette {
+                x: 16
+                width: parent.width - 32
+                color: Theme.color.primary
+                onColorSelected: (newColor) => root.paletteColor = newColor
             }
 
             SmallTitle { text: "Buttons"; width: parent.width }
