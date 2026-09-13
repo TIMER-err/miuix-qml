@@ -21,6 +21,7 @@ From this repository:
 QML4J_DARK=true ./run.sh
 ./run.sh showcases/MiuixGalleryShowcase.qml
 ./run.sh showcases/MiuixOverlayShowcase.qml
+./run.sh showcases/MiuixInputShowcase.qml
 ```
 
 Set `QML4J_DIR=/path/to/qml4j` for another location. The launcher rebuilds the local engine and places its compiled classes before Maven dependencies, so it runs the current source. The default showcase switches between one and two columns at 760 px, and the sun/moon action changes the theme live.
@@ -77,11 +78,17 @@ Preference rows wrap their text and compute their height from content plus 16 px
 | `Dialog` | Phone bottom sheet / desktop centered presentation, 420 px max width, centered text, scrollable body with fixed actions, safe interrupted transitions |
 | `SmoothRectangle` | Upstream continuous-corner path, responsive geometry and inset border, implemented with existing `Shape` / `PathCubic` |
 | `Ripple` | Flat Miuix indication with additive hover/focus/press alpha; existing long-press and corner APIs retained |
+| `TextField` | Continuous background, 2 px focus border, internal 17/10 px label, password/clear actions and wrapping helper text |
+| `RadioButton` | Upstream 26 px vector check with animated drawing and press feedback; selection remains controlled by the caller |
 | `Theme` | Mutable `dark`, shared `metrics`, dedicated disabled button/switch/slider colors |
 
 The overlay showcase demonstrates confirmation and long-content dialogs, plus a dropdown with summaries and disabled entries. `Dialog` accepts `maxWidth`, `cornerRadius`, `padding`, `outsideMargin`, `topInset`, `bottomInset`, and a `largeScreen` override. By default it centers when the window is at least 840 × 480; otherwise it slides up from the bottom. Two actions stack when their labels cannot fit side by side. Repeated `open()` / `close()` calls are guarded, and reopening cancels a pending close.
 
 Dropdown entries may be strings or `{ text, summary, enabled }` objects. `popupWidth` defaults to 288 and `popupMaxHeight` to 420; both are capped to the visible window. Long lists scroll, selected entries are revealed on opening, and the popup follows its anchor during resize.
+
+`TextField` keeps its label inline while empty, including when focused. With text, the label shrinks inside the field; `useLabelAsPlaceholder: true` hides it instead. `cornerRadius`, `horizontalPadding`, `verticalPadding`, `backgroundColor`, `labelColor`, and `borderColor` customize the chrome. The existing `type: "outlined"` option adds a resting outline. `clearButtonEnabled`, `clear()`, `cleared()`, and `focusInput()` control the clear action and focus. Password, custom trailing action, error indicator, and clear action share one slot. Supporting/error text wraps and contributes to `implicitHeight`.
+
+`RadioButton.checked` is controlled: update it in `onClicked`, or bind it to a shared selected value. Clicking the marker, label, or space between them emits one signal. Long labels wrap within the assigned width.
 
 For a controlled dropdown, set `selectOnClick: false`, bind `currentIndex` to application state, and update that state in `onActivated`. This preserves the binding when another control changes the selected value.
 
@@ -115,7 +122,7 @@ This alignment pass changes only the component library. It uses the existing eng
 
 The integration runner loads every exported component, dispatches pointer and keyboard events, checks resizing and theme updates, and writes light/dark previews at 390 and 1040 px to `build/previews/`. It uses the current qml4j compiler, layout engine, input dispatcher, and Skia renderer.
 
-See [visual alignment notes](docs/visual-alignment.md) for source references and remaining differences. Previews: [dark showcase](docs/preview-dark.png), [phone dialog](docs/dialog-phone-light.png), [desktop dialog](docs/dialog-desktop-dark.png), [dropdown](docs/dropdown-phone-light.png).
+See [visual alignment notes](docs/visual-alignment.md) for source references and remaining differences. Previews: [dark showcase](docs/preview-dark.png), [phone dialog](docs/dialog-phone-light.png), [desktop dialog](docs/dialog-desktop-dark.png), [dropdown](docs/dropdown-phone-light.png), [inputs light](docs/inputs-light.png), [inputs dark](docs/inputs-dark.png).
 
 ## License
 

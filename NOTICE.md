@@ -17,3 +17,7 @@ The continuous-corner geometry in miuix/Core/SmoothRectangle.qml is adapted
 from miuix-squircle/SquirclePath.kt, Copyright 2026 compose-miuix-ui
 contributors, Apache License 2.0. Dialog, dropdown, and flat indication
 metrics follow the same reference commit noted above.
+
+The RadioButton check path and TextField chrome metrics are adapted from
+basic/RadioButton.kt and basic/TextField.kt, Copyright 2025 compose-miuix-ui
+contributors, Apache License 2.0, at the same reference commit.

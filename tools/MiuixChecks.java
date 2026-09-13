@@ -31,6 +31,9 @@ public final class MiuixChecks {
         smokeComponents();
         preferences();
         search();
+        textFields();
+        textFieldBaselines();
+        radioButtons();
         sliders();
         dropdown();
         scrolling();
@@ -40,6 +43,7 @@ public final class MiuixChecks {
         longDropdown();
         previews();
         overlayPreviews();
+        inputPreviews();
         System.out.println("PASS: " + checks + " assertions; previews in " + output);
     }
 
@@ -160,6 +164,170 @@ public final class MiuixChecks {
         }
     }
 
+    private static void textFields() throws Exception {
+        QmlView view = scene("Rectangle { width: 320; height: 160; color: \"white\"; property int commits: 0; property int clears: 0; property int actions: 0;"
+            + " TextField { objectName: \"field\"; width: parent.width; label: \"Display name\";"
+            + " onAccepted: commits += 1; onCleared: clears += 1; onTrailingIconClicked: actions += 1 } }");
+        try {
+            Item field = view.findByObjectName("field");
+            Item input = view.findByObjectName("miuixTextFieldInput");
+            Item action = view.findByObjectName("miuixTextFieldAction");
+            Item label = view.findByObjectName("miuixTextFieldLabel");
+            click(view, 100, 26);
+            render(view, 320, 160, "field-empty-focused");
+            check(Boolean.TRUE.equals(get(field, "focused")), "text field takes focus on click");
+            check(Boolean.FALSE.equals(get(field, "isFloating")), "empty focused label remains inline");
+            check(Math.abs(label.y.peekDouble() + label.height.peekDouble() / 2
+                - input.y.peekDouble() - input.height.peekDouble() / 2) < 0.1, "empty label and editor share the same vertical center");
+            BufferedImage focused = ImageIO.read(output.resolve("field-empty-focused.png").toFile());
+            check((focused.getRGB(160, 0) & 0xffffff) == 0x3482ff, "focused field has primary top border");
+            view.dispatchKey(0, "Miuix", true);
+            settle(view);
+            render(view, 320, 160, null);
+            check("Miuix".equals(get(field, "text")), "text field exposes keyboard edits");
+            check(label.y.peekDouble() >= 0 && label.y.peekDouble() + label.height.peekDouble() <= input.y.peekDouble(), "floating label stays inside and above input");
+            set(field, "text", "Replacement");
+            settle(view);
+            check("Replacement".equals(get(input, "text")), "programmatic value replaces edited text");
+            clickCenter(view, action);
+            check("".equals(get(field, "text")) && number(view.root(), "clears") == 1, "clear action empties input and emits once");
+            view.dispatchKey(0, "Again", true);
+            settle(view);
+            check("Again".equals(get(field, "text")), "typing continues after clear");
+            set(field, "useLabelAsPlaceholder", true);
+            settle(view);
+            check(!label.visible.peek() && Boolean.FALSE.equals(get(field, "isFloating")), "placeholder label hides once text exists");
+            set(field, "isPassword", true);
+            settle(view);
+            check(number(input, "echoMode") == 2, "password starts masked");
+            clickCenter(view, action);
+            check(Boolean.TRUE.equals(get(field, "passwordVisible")) && number(input, "echoMode") == 0, "password action toggles visibility");
+            set(field, "enabled", false);
+            settle(view);
+            clickCenter(view, action);
+            view.dispatchKey(0, "blocked", true);
+            settle(view);
+            check("Again".equals(get(field, "text")) && Boolean.TRUE.equals(get(field, "passwordVisible")), "disabled field ignores input and password toggle");
+            set(field, "enabled", true);
+            set(field, "isPassword", false);
+            set(field, "readOnly", true);
+            settle(view);
+            click(view, 100, 26);
+            view.dispatchKey(0, "blocked", true);
+            settle(view);
+            check("Again".equals(get(field, "text")) && !action.visible.peek(), "read-only input preserves value and hides clear");
+            set(field, "readOnly", false);
+            set(field, "trailingIcon", "search");
+            settle(view);
+            clickCenter(view, action);
+            check(number(view.root(), "actions") == 1 && "Again".equals(get(field, "text")), "custom trailing action emits without clearing");
+            set(field, "trailingIcon", "");
+            set(field, "errorText", "Enter a complete email address before continuing to the next step.");
+            view.root().width.set(210);
+            settle(view);
+            Item support = view.findByObjectName("miuixTextFieldSupport");
+            check(field.height.peekDouble() >= support.y.peekDouble() + support.height.peekDouble(), "narrow field reserves wrapped error text height");
+            check(coordinate(input, true) + input.width.peekDouble() <= coordinate(action, true), "narrow input leaves room for trailing action");
+            click(view, 70, 26);
+            view.dispatchKey(QmlView.KEY_ENTER, null, true);
+            settle(view);
+            check(number(view.root(), "commits") == 1, "Enter emits accepted once");
+            set(field, "text", "");
+            set(field, "label", "");
+            set(field, "placeholderText", "Email address");
+            set(field, "verticalPadding", 24);
+            settle(view);
+            Item placeholder = view.findByObjectName("miuixTextFieldPlaceholder");
+            check(Math.abs(placeholder.y.peekDouble() + placeholder.height.peekDouble() / 2
+                - input.y.peekDouble() - input.height.peekDouble() / 2) < 0.1
+                && input.y.peekDouble() + input.height.peekDouble() / 2 == number(field, "fieldHeight") / 2,
+                "placeholder and editor remain centered with custom padding");
+        } finally {
+            view.dispose();
+        }
+    }
+
+    private static void textFieldBaselines() throws Exception {
+        QmlView view = scene("Rectangle { width: 300; height: 220; color: \"white\";"
+            + " TextField { width: 300; label: \"Email address\" }"
+            + " TextField { y: 80; width: 300; placeholderText: \"Email address\" }"
+            + " TextField { y: 160; width: 300; text: \"Email address\"; clearButtonEnabled: false } }");
+        try {
+            render(view, 300, 220, "input-baselines");
+            BufferedImage pixels = ImageIO.read(output.resolve("input-baselines.png").toFile());
+            int labelBand = textBand(pixels, 0);
+            int placeholderBand = textBand(pixels, 80);
+            int inputBand = textBand(pixels, 160);
+            check(Math.abs(labelBand - inputBand) <= 2 && Math.abs(placeholderBand - inputBand) <= 2,
+                "label, placeholder and typed glyphs have matching raster baselines");
+        } finally {
+            view.dispose();
+        }
+    }
+
+    private static int textBand(BufferedImage pixels, int top) {
+        int first = 56, last = -1;
+        for (int y = 4; y < 52; y++) {
+            for (int x = 20; x < 180; x++) {
+                int rgb = pixels.getRGB(x, top + y);
+                if (((rgb >> 16) & 255) < 160 && ((rgb >> 8) & 255) < 160 && (rgb & 255) < 160) {
+                    first = Math.min(first, y);
+                    last = Math.max(last, y);
+                }
+            }
+        }
+        check(last >= first, "text alignment fixture paints glyphs");
+        return first + last;
+    }
+
+    private static void radioButtons() throws Exception {
+        QmlView view = scene("Rectangle { width: 240; height: 150; color: \"white\"; property int chosen: 0; property int clicks: 0;"
+            + " RadioButton { objectName: \"first\"; width: 240; text: \"First\"; checked: chosen === 0; onClicked: { chosen = 0; clicks += 1 } }"
+            + " RadioButton { objectName: \"second\"; y: 50; width: 240; text: \"A long option which wraps on narrow screens\"; checked: chosen === 1; onClicked: { chosen = 1; clicks += 1 } } }");
+        try {
+            Item first = view.findByObjectName("first");
+            Item second = view.findByObjectName("second");
+            render(view, 240, 150, "radio-initial");
+            BufferedImage initial = ImageIO.read(output.resolve("radio-initial.png").toFile());
+            check((initial.getRGB(20, 9) & 0xffffff) != 0xffffff, "selected radio renders vector check");
+            check((initial.getRGB(13, 65) & 0xffffff) == 0xffffff, "unselected radio has no ring or fill");
+            click(view, 90, 65);
+            render(view, 240, 150, "radio-selected");
+            check(Boolean.FALSE.equals(get(first, "checked")) && Boolean.TRUE.equals(get(second, "checked")), "radio label click updates controlled selection");
+            check(number(view.root(), "clicks") == 1, "radio emits one callback");
+            set(second, "enabled", false);
+            settle(view);
+            click(view, 13, 65);
+            check(number(view.root(), "clicks") == 1, "disabled radio ignores clicks");
+            double oldHeight = second.height.peekDouble();
+            second.width.set(140);
+            settle(view);
+            check(second.height.peekDouble() > oldHeight, "radio label wraps and increases row height");
+        } finally {
+            view.dispose();
+        }
+    }
+
+    private static void inputPreviews() throws Exception {
+        for (boolean dark : new boolean[] {false, true}) {
+            ((StyleManager) StyleManager.__instance()).isDarkTheme.set(dark);
+            QmlView view = scene(Files.readString(project.resolve("showcases/MiuixInputShowcase.qml"), StandardCharsets.UTF_8));
+            try {
+                for (int width : new int[] {1040, 390}) {
+                    view.root().width.set(width);
+                    view.root().height.set(860);
+                    settle(view);
+                    render(view, width, 860, "inputs-" + width + (dark ? "-dark" : "-light"));
+                    check(view.findByObjectName("nameField").width.peekDouble() >= width / 3.0, "input showcase fits resized columns");
+                }
+                set(view.root(), "focusPreview", true);
+                render(view, 390, 860, "inputs-focused-390" + (dark ? "-dark" : "-light"));
+            } finally {
+                view.dispose();
+            }
+        }
+    }
+
     private static void sliders() throws Exception {
         QmlView view = scene("Item { width: 320; height: 180; property int ends: 0;"
             + " Slider { objectName: \"single\"; width: 300; from: 0; to: 100; value: 25; stepSize: 10; onEditingFinished: ends += 1 }"
@@ -258,6 +426,24 @@ public final class MiuixChecks {
             BufferedImage resized = ImageIO.read(output.resolve("smooth-resized.png").toFile());
             check((resized.getRGB(89, 99) & 0xffffff) == 0xffffff, "continuous geometry follows resize");
             check((resized.getRGB(45, 50) & 0xffffff) == 0x00aa00, "shape color change invalidates cached rendering");
+            set(shape, "color", "transparent");
+            settle(view);
+            render(view, 90, 100, "smooth-border-only");
+            BufferedImage borderOnly = ImageIO.read(output.resolve("smooth-border-only.png").toFile());
+            check((borderOnly.getRGB(45, 50) & 0xffffff) == 0xffffff, "filled border ring preserves transparent interior");
+            int blended = 0;
+            for (int y = 0; y < 32; y++) {
+                for (int x = 0; x < 32; x++) {
+                    int pixel = borderOnly.getRGB(x, y) & 0xffffff;
+                    if (pixel != 0xffffff && pixel != 0xff0000) blended++;
+                }
+            }
+            check(blended > 20, "border corner has antialiased coverage instead of a binary edge");
+            set(shape, "borderWidth", 0);
+            settle(view);
+            render(view, 90, 100, "smooth-border-hidden");
+            BufferedImage hidden = ImageIO.read(output.resolve("smooth-border-hidden.png").toFile());
+            check((hidden.getRGB(45, 0) & 0xffffff) == 0xffffff, "border clears when its width becomes zero");
         } finally {
             view.dispose();
         }
