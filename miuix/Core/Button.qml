@@ -60,19 +60,20 @@ Item {
         }
     }
 
-    Rectangle {
+    SmoothRectangle {
         id: backgroundRect
         anchors.fill: parent
         radius: control.cornerRadius
         color: containerColor
-        border.width: type === "outlined" ? 1 : 0
-        border.color: enabled ? _colors.outline : _colors.disabledSecondaryVariant
+        borderWidth: type === "outlined" ? 1 : 0
+        borderColor: enabled ? _colors.outline : _colors.disabledSecondaryVariant
 
-        Rectangle {
+        SmoothRectangle {
             anchors.fill: parent
             radius: parent.radius
             color: _colors.onBackground
-            opacity: control.pressed ? 0.10 : (control.hovered ? 0.06 : 0)
+            opacity: (control.pressed ? 0.10 : 0) + (control.hovered ? 0.06 : 0) + (control.focused ? 0.08 : 0)
+            Behavior on opacity { NumberAnimation { duration: control.pressed ? 120 : 200; easing.type: Easing.OutCubic } }
         }
 
         Row {

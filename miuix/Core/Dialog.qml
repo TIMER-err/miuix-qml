@@ -1,15 +1,11 @@
 import QtQuick
-import QtQuick.Layouts
-import QtQuick.Effects
 import miuix.Core
+
 Item {
-    id: control
-    
-    // API
+    id: dialogRoot
     property string title: ""
     property string text: ""
     property string icon: ""
-    
     property string acceptText: "OK"
     property string rejectText: "Cancel"
     property string rejectIcon: ""
@@ -18,340 +14,199 @@ Item {
     property bool showRejectButton: true
     property bool showNeutralButton: false
     property bool closeOnScrim: true
+    property real maxWidth: 420
+    property real outsideMargin: 12
+    property real padding: 24
+    property real cornerRadius: 32
+    property real topInset: 0
+    property real bottomInset: 0
+    property bool largeScreen: overlayLayer.width >= 840 && overlayLayer.height >= 480
     readonly property bool opened: overlayLayer.visible
-    readonly property bool compactActionLayout: overlayLayer.width < 600
-    
-    // Signals
+    readonly property bool compactActionLayout: actionRow.stacked
+    default property alias content: contentPlaceholder.data
     signal accepted()
     signal rejected()
     signal neutral()
     signal closed()
-    
-    // Custom content support
-    default property alias content: contentPlaceholder.data
-    
-    // Theme Helpers
-    property var _colors: Theme.color
-    property var _typography: Theme.typography
-    property var _shape: Theme.shape
-    
-    // Internal
+
     visible: false
-    
+    property real _progress: 0
+    property bool _closing: false
+    readonly property real _availableHeight: Math.max(0, overlayLayer.height - topInset - bottomInset - outsideMargin * 2)
+
     function open() {
-        var root = control
-        while (root.parent) {
-            root = root.parent
-        }
-        
-        if (root) {
-            overlayLayer.parent = root
-            overlayLayer.z = 99999
-            overlayLayer.anchors.fill = root
-            
-            // Stop any running animations
-            exitAnimation.stop()
-            enterAnimation.stop()
-            
-            // Reset properties for entry
-            animationWrapper.scale = 0.9
-            animationWrapper.opacity = 0.0
-            scrim.opacity = 0.0
-            
-            overlayLayer.visible = true
-            enterAnimation.start()
-        }
-    }
-    
-    function close() {
-        // Stop any running animations
-        enterAnimation.stop()
+        if (opened && !_closing) return
+        var host = dialogRoot
+        while (host.parent) host = host.parent
         exitAnimation.stop()
-        
+        _closing = false
+        overlayLayer.parent = host
+        overlayLayer.anchors.fill = host
+        if (!opened) _progress = 0
+        overlayLayer.visible = true
+        enterAnimation.start()
+    }
+    function close() {
+        if (!opened || _closing) return
+        enterAnimation.stop()
+        _closing = true
         exitAnimation.start()
     }
-    
-    // Overlay Layer
+
+    NumberAnimation {
+        id: enterAnimation
+        target: dialogRoot
+        property: "_progress"
+        to: 1
+        duration: 350
+        easing.type: Easing.OutCubic
+    }
+    NumberAnimation {
+        id: exitAnimation
+        target: dialogRoot
+        property: "_progress"
+        to: 0
+        duration: 260
+        easing.type: Easing.OutCubic
+        onFinished: {
+            overlayLayer.visible = false
+            overlayLayer.anchors.fill = undefined
+            overlayLayer.parent = dialogRoot
+            dialogRoot._closing = false
+            dialogRoot.closed()
+        }
+    }
+
     Item {
         id: overlayLayer
         visible: false
-        
-        // Animations
-        ParallelAnimation {
-            id: enterAnimation
-            
-            NumberAnimation { 
-                target: scrim
-                property: "opacity"
-                from: 0.0
-                to: 0.30
-                duration: 150
-                easing.type: Easing.OutQuad
-            }
-            
-            NumberAnimation { 
-                target: animationWrapper
-                property: "scale"
-                from: 0.9
-                to: 1.0
-                duration: 250
-                easing.type: Easing.OutBack
-                easing.overshoot: 1.0 // Gentle overshoot
-            }
-            
-            NumberAnimation { 
-                target: animationWrapper
-                property: "opacity"
-                from: 0.0
-                to: 1.0
-                duration: 150
-            }
-        }
-        
-        ParallelAnimation {
-            id: exitAnimation
-            onFinished: {
-                overlayLayer.visible = false
-                control.closed()
-            }
-            
-            NumberAnimation { 
-                target: scrim
-                property: "opacity"
-                from: 0.30
-                to: 0.0
-                duration: 150
-            }
-            
-            NumberAnimation { 
-                target: animationWrapper
-                property: "opacity"
-                from: 1.0
-                to: 0.0
-                duration: 100
-            }
-            
-            // Optional: slight scale down on exit
-             NumberAnimation { 
-                target: animationWrapper
-                property: "scale"
-                from: 1.0
-                to: 0.95
-                duration: 100
-            }
-        }
-        
-        // Scrim
+        z: 99999
         Rectangle {
-            id: scrim
             anchors.fill: parent
-            color: "#000000"
-            opacity: 0.0 // Controlled by animation
-            
+            color: Theme.color.windowDimming
+            opacity: dialogRoot._progress
+        }
+        MouseArea {
+            anchors.fill: parent
+            onClicked: if (dialogRoot.closeOnScrim) dialogRoot.close()
+            onWheel: (wheel) => { wheel.accepted = true }
+        }
+        Item {
+            id: panel
+            objectName: "miuixDialogPanel"
+            width: Math.max(0, Math.min(dialogRoot.maxWidth, overlayLayer.width - dialogRoot.outsideMargin * 2))
+            height: Math.min(bodyColumn.height + actions.height + dialogRoot.padding * 2 + (actions.height > 0 ? 12 : 0),
+                dialogRoot.largeScreen ? dialogRoot._availableHeight * 2 / 3 : dialogRoot._availableHeight)
+            x: (overlayLayer.width - width) / 2
+            y: dialogRoot.largeScreen
+                ? dialogRoot.topInset + (dialogRoot._availableHeight - height) / 2 + dialogRoot.outsideMargin
+                : overlayLayer.height - dialogRoot.bottomInset - dialogRoot.outsideMargin - height
+                    + (1 - dialogRoot._progress) * overlayLayer.height
+            scale: dialogRoot.largeScreen ? 0.8 + 0.2 * dialogRoot._progress : 1
+            opacity: dialogRoot.largeScreen ? dialogRoot._progress : 1
+            SmoothRectangle {
+                anchors.fill: parent
+                radius: dialogRoot.cornerRadius
+                color: Theme.color.background
+            }
             MouseArea {
                 anchors.fill: parent
-                onClicked: if (control.closeOnScrim) control.close()
-                onWheel: (wheel) => {} // Block scroll propagation
+                onWheel: (wheel) => { wheel.accepted = true }
             }
-        }
-        
-        // Wrapper for Dialog + Shadow to animate them together
-        Item {
-            id: animationWrapper
-            anchors.centerIn: parent
-            width: Math.min(560, Math.max(280, parent.width - 48))
-            height: dialogContainer.height
-            
-            // Dialog Container
-            Rectangle {
-                id: dialogContainer
-                anchors.top: parent.top
-                anchors.left: parent.left
-                anchors.right: parent.right
-                height: mainColumn.implicitHeight + 48 // Padding
-                radius: 16
-                color: _colors.surfaceContainer
-                
-                // Block clicks from passing through to scrim
-                MouseArea {
-                    anchors.fill: parent
-                }
-
-                ColumnLayout {
-                    id: mainColumn
-                    anchors.top: parent.top
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.topMargin: 24
-                    anchors.leftMargin: 24
-                    anchors.rightMargin: 24
-                    spacing: 16
-                    
-                    // Icon
-                    Text {
-                        visible: control.icon !== ""
-                        text: control.icon
-                        font.family: Theme.iconFont.name
-                        font.pixelSize: 24
-                        color: _colors.secondary
-                        Layout.alignment: Qt.AlignHCenter
-                        Layout.bottomMargin: 0
+            Flickable {
+                id: bodyViewport
+                objectName: "miuixDialogViewport"
+                x: dialogRoot.padding
+                y: dialogRoot.padding
+                width: Math.max(0, panel.width - dialogRoot.padding * 2)
+                height: Math.max(0, panel.height - dialogRoot.padding * 2 - actions.height - (actions.height > 0 ? 12 : 0))
+                contentWidth: width
+                contentHeight: bodyColumn.height
+                flickableDirection: "VerticalFlick"
+                clip: true
+                Column {
+                    id: bodyColumn
+                    width: bodyViewport.width
+                    spacing: 12
+                    Icon {
+                        name: dialogRoot.icon
+                        visible: name.length > 0
+                        width: 28
+                        height: 28
+                        x: (parent.width - width) / 2
+                        color: Theme.color.primary
                     }
-                    
-                    // Headline
                     Text {
-                        visible: control.title !== ""
-                        text: control.title
-                        font.family: _typography.headlineSmall.family
-                        font.pixelSize: _typography.headlineSmall.size
-                        font.weight: _typography.headlineSmall.weight
-                        color: _colors.onSurfaceColor
-                        Layout.fillWidth: true
-                        Layout.alignment: control.icon !== "" ? Qt.AlignHCenter : Qt.AlignLeft
-                        horizontalAlignment: control.icon !== "" ? Text.AlignHCenter : Text.AlignLeft
+                        width: parent.width
+                        visible: text.length > 0
+                        text: dialogRoot.title
+                        font.pixelSize: 18
+                        font.weight: 57
+                        horizontalAlignment: Text.AlignHCenter
                         wrapMode: Text.Wrap
+                        color: Theme.color.onBackground
                     }
-                    
-                    // Supporting Text
                     Text {
-                        visible: control.text !== ""
-                        text: control.text
-                        font.family: _typography.bodyMedium.family
-                        font.pixelSize: _typography.bodyMedium.size
-                        font.weight: _typography.bodyMedium.weight
-                        color: _colors.onSurfaceVariantColor
-                        Layout.fillWidth: true
+                        width: parent.width
+                        visible: text.length > 0
+                        text: dialogRoot.text
+                        font.pixelSize: 16
+                        horizontalAlignment: Text.AlignHCenter
                         wrapMode: Text.Wrap
+                        color: Theme.color.onSurfaceSecondary
                     }
-                    
-                    // Custom Content
                     Item {
                         id: contentPlaceholder
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: childrenRect.height
+                        width: parent.width
+                        height: childrenRect.height
                         visible: children.length > 0
-                    }
-                    
-                    // Actions
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        Layout.topMargin: 8
-                        spacing: 4
-
-                        // Three-action dialogs use two full-width rows: the two
-                        // alternative recovery paths share the first row, while
-                        // the recommended retry action owns the second row.
-                        RowLayout {
-                            Layout.fillWidth: true
-                            visible: control.showNeutralButton
-                                     && !control.compactActionLayout
-                            spacing: 8
-
-                            Button {
-                                Layout.fillWidth: true
-                                Layout.preferredWidth: 1
-                                text: control.neutralText
-                                type: "outlined"
-                                onClicked: {
-                                    control.neutral()
-                                    control.close()
-                                }
-                            }
-
-                            Button {
-                                Layout.fillWidth: true
-                                Layout.preferredWidth: 1
-                                visible: control.showRejectButton
-                                text: control.rejectText
-                                icon: control.rejectIcon
-                                type: "outlined"
-                                onClicked: {
-                                    control.rejected()
-                                    control.close()
-                                }
-                            }
-                        }
-
-                        Button {
-                            Layout.fillWidth: true
-                            visible: control.showNeutralButton
-                                     && control.compactActionLayout
-                            text: control.neutralText
-                            type: "outlined"
-                            onClicked: {
-                                control.neutral()
-                                control.close()
-                            }
-                        }
-
-                        Button {
-                            Layout.fillWidth: true
-                            visible: control.showNeutralButton
-                                     && control.showRejectButton
-                                     && control.compactActionLayout
-                            text: control.rejectText
-                            icon: control.rejectIcon
-                            type: "outlined"
-                            onClicked: {
-                                control.rejected()
-                                control.close()
-                            }
-                        }
-
-                        Button {
-                            Layout.fillWidth: true
-                            visible: control.showNeutralButton
-                                     && control.showAcceptButton
-                            text: control.acceptText
-                            type: "filled"
-                            onClicked: {
-                                control.accepted()
-                                control.close()
-                            }
-                        }
-
-                        RowLayout {
-                            Layout.fillWidth: true
-                            visible: !control.showNeutralButton
-                            spacing: 8
-
-                            Item { Layout.fillWidth: true } // Spacer
-
-                            Button {
-                                visible: control.showRejectButton
-                                text: control.rejectText
-                                icon: control.rejectIcon
-                                type: "text"
-                                onClicked: {
-                                    control.rejected()
-                                    control.close()
-                                }
-                            }
-
-                            Button {
-                                visible: control.showAcceptButton
-                                text: control.acceptText
-                                type: "filled" // Changed to filled as requested
-                                onClicked: {
-                                    control.accepted()
-                                    control.close()
-                                }
-                            }
-                        }
                     }
                 }
             }
-            
-            // Shadow (MultiEffect)
-            MultiEffect {
-                source: dialogContainer
-                anchors.fill: dialogContainer
-                shadowEnabled: true
-                shadowColor: Theme.color.shadow
-                shadowBlur: 12
-                shadowVerticalOffset: 4
-                shadowOpacity: 0.3
-                z: -1
+            Column {
+                id: actions
+                x: dialogRoot.padding
+                y: panel.height - dialogRoot.padding - height
+                width: Math.max(0, panel.width - dialogRoot.padding * 2)
+                spacing: 12
+                Button {
+                    width: parent.width
+                    visible: dialogRoot.showNeutralButton
+                    text: dialogRoot.neutralText
+                    type: "filledTonal"
+                    onClicked: { dialogRoot.neutral(); dialogRoot.close() }
+                }
+                Item {
+                    id: actionRow
+                    width: parent.width
+                    property bool stacked: dialogRoot.showAcceptButton && dialogRoot.showRejectButton
+                        && width < acceptButton.implicitWidth + rejectButton.implicitWidth + 12
+                    height: stacked ? 108 : (dialogRoot.showAcceptButton || dialogRoot.showRejectButton ? 48 : 0)
+                    property real buttonWidth: !stacked && dialogRoot.showAcceptButton && dialogRoot.showRejectButton
+                        ? Math.max(0, (width - 12) / 2) : width
+                    Button {
+                        id: rejectButton
+                        objectName: "miuixDialogReject"
+                        width: actionRow.buttonWidth
+                        height: 48
+                        visible: dialogRoot.showRejectButton
+                        text: dialogRoot.rejectText
+                        icon: dialogRoot.rejectIcon
+                        type: "filledTonal"
+                        onClicked: { dialogRoot.rejected(); dialogRoot.close() }
+                    }
+                    Button {
+                        id: acceptButton
+                        objectName: "miuixDialogAccept"
+                        x: !actionRow.stacked && dialogRoot.showRejectButton ? actionRow.buttonWidth + 12 : 0
+                        y: actionRow.stacked ? 60 : 0
+                        width: actionRow.buttonWidth
+                        height: 48
+                        visible: dialogRoot.showAcceptButton
+                        text: dialogRoot.acceptText
+                        onClicked: { dialogRoot.accepted(); dialogRoot.close() }
+                    }
+                }
             }
         }
     }

@@ -10,6 +10,9 @@ import io.github.timer_err.qml4j.render.SurfaceBackend;
 import io.github.timer_err.qml4j.render.items.core.Item;
 import io.github.timer_err.qml4j.runtime.color.StyleManager;
 
+import java.awt.image.BufferedImage;
+import javax.imageio.ImageIO;
+
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -31,7 +34,12 @@ public final class MiuixChecks {
         sliders();
         dropdown();
         scrolling();
+        smoothGeometry();
+        flatIndication();
+        dialogs();
+        longDropdown();
         previews();
+        overlayPreviews();
         System.out.println("PASS: " + checks + " assertions; previews in " + output);
     }
 
@@ -210,6 +218,205 @@ public final class MiuixChecks {
         }
     }
 
+    private static float coordinate(Item item, boolean horizontal) {
+        float value = 0;
+        for (Item current = item; current != null; current = current.parent.peek()) {
+            value += horizontal ? current.x.peekFloat() : current.y.peekFloat();
+        }
+        return value;
+    }
+
+    private static void clickCenter(QmlView view, Item item) {
+        click(view, coordinate(item, true) + item.width.peekFloat() / 2,
+            coordinate(item, false) + item.height.peekFloat() / 2);
+    }
+
+    private static Item visibleItem(Item item, String name) {
+        if (!item.isVisible()) return null;
+        if (name.equals(item.objectName.peek())) return item;
+        for (Item child : item.children) {
+            Item found = visibleItem(child, name);
+            if (found != null) return found;
+        }
+        return null;
+    }
+
+    private static void smoothGeometry() throws Exception {
+        QmlView view = scene("Rectangle { width: 140; height: 100; color: \"#ffffff\";"
+            + " SmoothRectangle { objectName: \"smooth\"; anchors.fill: parent; radius: 32; borderWidth: 2; borderColor: \"#ff0000\"; color: \"#3482ff\" } }");
+        try {
+            Item shape = view.findByObjectName("smooth");
+            render(view, 140, 100, "smooth-geometry");
+            BufferedImage first = ImageIO.read(output.resolve("smooth-geometry.png").toFile());
+            check((first.getRGB(0, 0) & 0xffffff) == 0xffffff, "continuous corner leaves exterior transparent");
+            check((first.getRGB(70, 50) & 0xffffff) == 0x3482ff, "continuous shape fills interior");
+            check((first.getRGB(70, 0) & 0xffffff) == 0xff0000, "continuous shape retains inset border");
+            view.root().width.set(90);
+            set(shape, "color", "#00aa00");
+            settle(view);
+            render(view, 90, 100, "smooth-resized");
+            BufferedImage resized = ImageIO.read(output.resolve("smooth-resized.png").toFile());
+            check((resized.getRGB(89, 99) & 0xffffff) == 0xffffff, "continuous geometry follows resize");
+            check((resized.getRGB(45, 50) & 0xffffff) == 0x00aa00, "shape color change invalidates cached rendering");
+        } finally {
+            view.dispose();
+        }
+    }
+
+    private static void flatIndication() throws Exception {
+        QmlView view = scene("Rectangle { width: 160; height: 100; color: \"#ffffff\"; property int holds: 0;"
+            + " Ripple { objectName: \"feedback\"; anchors.fill: parent; clipRadius: 16; rippleColor: \"#000000\"; longPressEnabled: true; longPressMs: 100; onLongPressed: holds += 1 } }");
+        try {
+            view.dispatchPointerMove(80, 50);
+            view.dispatchPointerDown(80, 50);
+            render(view, 160, 100, "flat-indication");
+            BufferedImage pressed = ImageIO.read(output.resolve("flat-indication.png").toFile());
+            int center = pressed.getRGB(80, 50) & 0xffffff;
+            check(center == (pressed.getRGB(25, 25) & 0xffffff) && center < 0xffffff, "press applies uniform indication, without radial wave");
+            check((pressed.getRGB(0, 0) & 0xffffff) == 0xffffff, "flat indication respects corner clipping");
+            check(number(view.root(), "holds") == 1, "long-press signal remains supported");
+            view.dispatchPointerUp(80, 50);
+            set(view.findByObjectName("feedback"), "enabled", false);
+            settle(view);
+            render(view, 160, 100, "flat-indication-disabled");
+            BufferedImage disabled = ImageIO.read(output.resolve("flat-indication-disabled.png").toFile());
+            check((disabled.getRGB(80, 50) & 0xffffff) == 0xffffff, "disabled indication clears hover and press feedback");
+        } finally {
+            view.dispose();
+        }
+    }
+
+    private static void dialogs() throws Exception {
+        QmlView view = scene("Item { width: 390; height: 780; property int command: 0; property int accepts: 0; property int closes: 0;"
+            + " onCommandChanged: { if (command === 1 || command === 3) popup.open(); else popup.close() }"
+            + " Dialog { id: popup; objectName: \"dialog\"; title: \"Download this album?\"; text: \"Use your mobile connection to download these songs.\"; onAccepted: accepts += 1; onClosed: closes += 1 } }");
+        try {
+            Item modal = view.findByObjectName("dialog");
+            set(view.root(), "command", 1);
+            settle(view);
+            render(view, 390, 780, null);
+            Item panel = view.findByObjectName("miuixDialogPanel");
+            check(Boolean.TRUE.equals(get(modal, "opened")), "dialog opens");
+            check(Math.abs(panel.width.peekDouble() - 366) < 1, "phone dialog has 12 px outer margins");
+            check(Math.abs(panel.y.peekDouble() + panel.height.peekDouble() - 768) < 1, "phone dialog sits at bottom");
+            clickCenter(view, view.findByObjectName("miuixDialogAccept"));
+            render(view, 390, 780, null);
+            check(number(view.root(), "accepts") == 1, "dialog acceptance emits once");
+            check(number(view.root(), "closes") == 1 && Boolean.FALSE.equals(get(modal, "opened")), "dialog closes after acceptance");
+            set(view.root(), "command", 3);
+            settle(view);
+            set(view.root(), "command", 2);
+            settle(view);
+            set(view.root(), "command", 1);
+            settle(view);
+            render(view, 390, 780, null);
+            check(Boolean.TRUE.equals(get(modal, "opened")) && number(view.root(), "closes") == 1, "reopening cancels pending close");
+            view.root().width.set(1040);
+            view.root().height.set(800);
+            settle(view);
+            render(view, 1040, 800, null);
+            check(Math.abs(panel.width.peekDouble() - 420) < 1, "large dialog caps width at 420");
+            check(Math.abs(panel.y.peekDouble() + panel.height.peekDouble() / 2 - 400) < 1, "large dialog centers after resize");
+            set(modal, "acceptText", "Download album");
+            view.root().width.set(280);
+            settle(view);
+            render(view, 280, 800, null);
+            check(Boolean.TRUE.equals(get(modal, "compactActionLayout")), "narrow dialog stacks actions by measured label width");
+            Item accept = visibleItem(view.root(), "miuixDialogAccept");
+            Item reject = visibleItem(view.root(), "miuixDialogReject");
+            check(coordinate(accept, false) >= coordinate(reject, false) + reject.height.peekFloat(), "stacked actions do not overlap");
+            view.root().width.set(1040);
+            settle(view);
+            render(view, 1040, 800, null);
+            set(modal, "closeOnScrim", false);
+            settle(view);
+            click(view, 5, 5);
+            render(view, 1040, 800, null);
+            check(Boolean.TRUE.equals(get(modal, "opened")), "closeOnScrim false keeps dialog open");
+            set(modal, "closeOnScrim", true);
+            settle(view);
+            click(view, 5, 5);
+            render(view, 1040, 800, null);
+            check(number(view.root(), "closes") == 2, "scrim dismisses once");
+        } finally {
+            view.dispose();
+        }
+    }
+
+    private static void longDropdown() throws Exception {
+        QmlView view = scene("Item { width: 260; height: 260; property int choice: -1;"
+            + " SuperDropdown { objectName: \"longMenu\"; y: 180; title: \"Quality\";"
+            + " items: [{text: \"Unavailable\", enabled: false}, {text: \"A long option title that must wrap without covering the checkmark\", summary: \"With additional context\"}, \"Three\", \"Four\", \"Five\", \"Six\", \"Seven\", \"Eight\"];"
+            + " onActivated: choice = index } }");
+        try {
+            Item menu = view.findByObjectName("longMenu");
+            clickCenter(view, menu);
+            render(view, 260, 260, null);
+            Item panel = view.findByObjectName("miuixDropdownPanel");
+            Item viewport = view.findByObjectName("miuixDropdownViewport");
+            check(panel.x.peekDouble() >= 8 && panel.x.peekDouble() + panel.width.peekDouble() <= 252, "dropdown fits narrow window horizontally");
+            check(panel.y.peekDouble() >= 8 && panel.y.peekDouble() + panel.height.peekDouble() <= 252, "dropdown fits short window vertically");
+            check(number(viewport, "contentHeight") > viewport.height.peekDouble(), "long dropdown scrolls internally");
+            click(view, coordinate(viewport, true) + 35, coordinate(viewport, false) + 30);
+            check(number(view.root(), "choice") == -1 && Boolean.TRUE.equals(get(menu, "menuOpen")), "disabled dropdown option ignores clicks");
+            float px = coordinate(viewport, true) + 100;
+            float py = coordinate(viewport, false) + 180;
+            drag(view, px, py, px, py - 120);
+            check(number(viewport, "contentY") > 0, "drag scrolls dropdown list");
+            view.root().width.set(210);
+            view.root().height.set(230);
+            settle(view);
+            render(view, 210, 230, null);
+            check(panel.x.peekDouble() + panel.width.peekDouble() <= 202 && panel.y.peekDouble() + panel.height.peekDouble() <= 222, "open popup follows resize constraints");
+            set(menu, "enabled", false);
+            settle(view);
+            render(view, 210, 230, null);
+            check(Boolean.FALSE.equals(get(menu, "menuOpen")), "disabling preference closes popup");
+        } finally {
+            view.dispose();
+        }
+    }
+
+    private static void overlayPreviews() throws Exception {
+        for (boolean dark : new boolean[] {false, true}) {
+            ((StyleManager) StyleManager.__instance()).isDarkTheme.set(dark);
+            DirResourceLoader resources = new DirResourceLoader(project);
+            QmlView view = QmlView.withStockTypes(new QmlEngine()).resources(resources);
+            HostFonts.configure(view, resources);
+            view.load(Files.readString(project.resolve("showcases/MiuixOverlayShowcase.qml")));
+            try {
+                for (String preview : new String[] {"dialog", "dropdown", "longDialog"}) {
+                    for (int width : new int[] {390, 1040}) {
+                        view.root().width.set(width);
+                        view.root().height.set(800);
+                        set(view.root(), "preview", preview);
+                        settle(view);
+                        render(view, width, 800, preview + "-" + width + (dark ? "-dark" : "-light"));
+                        if (!preview.equals("dropdown")) {
+                            Item panel = visibleItem(view.root(), "miuixDialogPanel");
+                            check(panel != null && panel.height.peekDouble() <= 776, "visible dialog bounds remain on screen");
+                            if (preview.equals("longDialog")) {
+                                Item scroll = visibleItem(view.root(), "miuixDialogViewport");
+                                Item accept = visibleItem(view.root(), "miuixDialogAccept");
+                                float actionY = coordinate(accept, false);
+                                check(number(scroll, "contentHeight") > scroll.height.peekDouble(), "long dialog body has scrollable overflow");
+                                drag(view, coordinate(scroll, true) + 100, coordinate(scroll, false) + 200,
+                                    coordinate(scroll, true) + 100, coordinate(scroll, false) + 40);
+                                check(number(scroll, "contentY") > 0 && coordinate(accept, false) == actionY, "dialog content scrolls while actions stay fixed");
+                            }
+                        }
+                    }
+                    click(view, 5, 5);
+                    render(view, 1040, 800, null);
+                    set(view.root(), "preview", "none");
+                    settle(view);
+                }
+            } finally {
+                view.dispose();
+            }
+        }
+    }
+
     private static void previews() throws Exception {
         for (boolean dark : new boolean[] {false, true}) {
             ((StyleManager) StyleManager.__instance()).isDarkTheme.set(dark);
@@ -239,7 +446,7 @@ public final class MiuixChecks {
     private static void render(QmlView view, int width, int height, String name) throws Exception {
         try (Surface surface = Surface.makeRasterN32Premul(width, height)) {
             SurfaceBackend backend = new RasterBackend(surface, width, height);
-            for (int i = 0; i < 24; i++) {
+            for (int i = 0; i < 42; i++) {
                 surface.getCanvas().clear(0);
                 view.renderFrame(backend);
                 Thread.sleep(10);

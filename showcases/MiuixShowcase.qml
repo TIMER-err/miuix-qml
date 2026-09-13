@@ -235,6 +235,12 @@ Rectangle {
                                 IconButton { icon: "mail"; onClicked: showcase.feedback = "No new messages" }
                                 IconButton { icon: "search"; onClicked: showcase.feedback = "Search settings above" }
                             }
+                            Button {
+                                width: parent.width
+                                type: "filledTonal"
+                                text: "Preview dialog"
+                                onClicked: sampleDialog.open()
+                            }
                             Text {
                                 width: parent.width
                                 text: showcase.feedback
@@ -247,5 +253,13 @@ Rectangle {
                 }
             }
         }
+    }
+    Dialog {
+        id: sampleDialog
+        title: "Reset preferences?"
+        text: "Your connection and sound settings will return to their defaults. You can change them again at any time."
+        acceptText: "Reset"
+        rejectText: "Cancel"
+        onAccepted: showcase.feedback = "Preferences reset"
     }
 }

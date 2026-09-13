@@ -7,3 +7,13 @@ Visual design and default color tokens are ported from compose-miuix-ui/miuix
 
 Public QML API matches `md3.Core` (`Button`, `Switch`, `Theme.color.primary`, …)
 so an app can swap `import md3.Core` for `import miuix.Core`.
+
+The basic Search, Check, ArrowRight, and ArrowUpDown vector paths in
+miuix/Core/Icon.qml are adapted from compose-miuix-ui/miuix:
+Copyright 2025 compose-miuix-ui contributors, Apache License 2.0.
+Reference commit: 5157b503e86e2bfc2db61db00fff5df41326394a.
+
+The continuous-corner geometry in miuix/Core/SmoothRectangle.qml is adapted
+from miuix-squircle/SquirclePath.kt, Copyright 2026 compose-miuix-ui
+contributors, Apache License 2.0. Dialog, dropdown, and flat indication
+metrics follow the same reference commit noted above.
