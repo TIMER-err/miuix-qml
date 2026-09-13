@@ -14,6 +14,16 @@ Item {
     property bool showRejectButton: true
     property bool showNeutralButton: false
     property bool closeOnScrim: true
+    property bool closeOnEscape: true
+    property var _previousFocus: null
+    function activeItem(item) {
+        if (item.activeFocus) return item
+        for (var i = 0; i < item.children.length; i++) {
+            var found = activeItem(item.children[i])
+            if (found) return found
+        }
+        return null
+    }
     property real maxWidth: 420
     property real outsideMargin: 12
     property real padding: 24
@@ -38,12 +48,14 @@ Item {
         if (opened && !_closing) return
         var host = dialogRoot
         while (host.parent) host = host.parent
+        if (!opened) _previousFocus = activeItem(host)
         exitAnimation.stop()
         _closing = false
         overlayLayer.parent = host
         overlayLayer.anchors.fill = host
         if (!opened) _progress = 0
         overlayLayer.visible = true
+        overlayLayer.forceActiveFocus()
         enterAnimation.start()
     }
     function close() {
@@ -73,12 +85,15 @@ Item {
             overlayLayer.anchors.fill = undefined
             overlayLayer.parent = dialogRoot
             dialogRoot._closing = false
+            if (dialogRoot._previousFocus) dialogRoot._previousFocus.forceActiveFocus()
+            dialogRoot._previousFocus = null
             dialogRoot.closed()
         }
     }
 
     Item {
         id: overlayLayer
+        Keys.onEscapePressed: { if (dialogRoot.closeOnEscape) dialogRoot.close(); event.accepted = true }
         visible: false
         z: 99999
         Rectangle {

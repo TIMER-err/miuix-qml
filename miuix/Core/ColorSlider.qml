@@ -4,20 +4,23 @@ import miuix.Core
 // The shared capsule slider behind every miuix color control (ColorPicker.kt's
 // private ColorSlider): a gradient track with a white ring indicator.
 //
-// qml4j divergence: upstream insets the gradient by half the track height so the
-// end colors sit under the indicator's rest positions; a QML Gradient always spans
-// the full item, so the track is painted edge to edge.
 Item {
     id: colorSliderRoot
 
     property real value: 0
     // The full HSV hue sweep; otherwise the track runs startColor -> endColor.
     property bool hue: false
+    property var colors: []
     property color startColor: "#00000000"
     property color endColor: "#ffffffff"
     property bool checkerboard: false
     property real indicatorSize: 20
     signal moved(real newValue)
+    activeFocusOnTab: true
+    Keys.onLeftPressed: { if (enabled) moved(Math.max(0, value - 0.01)); event.accepted = true }
+    Keys.onRightPressed: { if (enabled) moved(Math.min(1, value + 0.01)); event.accepted = true }
+    readonly property real _inset: Math.min(0.5, height / Math.max(1, width) / 2)
+    function stopAt(fraction) { return _inset + fraction * (1 - 2 * _inset) }
 
     implicitWidth: 240
     implicitHeight: 26
@@ -86,32 +89,54 @@ Item {
     Rectangle {
         anchors.fill: parent
         radius: colorSliderRoot._trackRadius
-        visible: colorSliderRoot.hue
+        visible: colorSliderRoot.hue && colorSliderRoot.colors.length === 0
         // Solid fallback: Rectangle.fill() prefers the gradient, so this is only
         // ever seen if the gradient shader does not paint.
         color: "#ff0000"
         // orientation 1 is Gradient.Horizontal.
         gradient: Gradient {
             orientation: 1
-            GradientStop { position: 0.0000; color: "#ffff0000" }
-            GradientStop { position: 0.1667; color: "#ffffff00" }
-            GradientStop { position: 0.3333; color: "#ff00ff00" }
-            GradientStop { position: 0.5000; color: "#ff00ffff" }
-            GradientStop { position: 0.6667; color: "#ff0000ff" }
-            GradientStop { position: 0.8333; color: "#ffff00ff" }
-            GradientStop { position: 1.0000; color: "#ffff0000" }
+            GradientStop { position: colorSliderRoot.stopAt(0.0000); color: "#ffff0000" }
+            GradientStop { position: colorSliderRoot.stopAt(0.1667); color: "#ffffff00" }
+            GradientStop { position: colorSliderRoot.stopAt(0.3333); color: "#ff00ff00" }
+            GradientStop { position: colorSliderRoot.stopAt(0.5000); color: "#ff00ffff" }
+            GradientStop { position: colorSliderRoot.stopAt(0.6667); color: "#ff0000ff" }
+            GradientStop { position: colorSliderRoot.stopAt(0.8333); color: "#ffff00ff" }
+            GradientStop { position: colorSliderRoot.stopAt(1.0000); color: "#ffff0000" }
         }
     }
 
     Rectangle {
         anchors.fill: parent
         radius: colorSliderRoot._trackRadius
-        visible: !colorSliderRoot.hue
+        visible: !colorSliderRoot.hue && colorSliderRoot.colors.length === 0
         color: colorSliderRoot.endColor
         gradient: Gradient {
             orientation: 1
-            GradientStop { position: 0; color: colorSliderRoot._hex(colorSliderRoot.startColor) }
-            GradientStop { position: 1; color: colorSliderRoot._hex(colorSliderRoot.endColor) }
+            GradientStop { position: colorSliderRoot.stopAt(0); color: colorSliderRoot._hex(colorSliderRoot.startColor) }
+            GradientStop { position: colorSliderRoot.stopAt(1); color: colorSliderRoot._hex(colorSliderRoot.endColor) }
+        }
+    }
+
+    Rectangle {
+        anchors.fill: parent
+        radius: colorSliderRoot._trackRadius
+        visible: colorSliderRoot.colors.length > 0
+        gradient: Gradient {
+            orientation: 1
+            GradientStop { position: colorSliderRoot.stopAt(0.0); color: colorSliderRoot.colors.length > 0 ? colorSliderRoot._hex(colorSliderRoot.colors[0]) : "transparent" }
+            GradientStop { position: colorSliderRoot.stopAt(0.08333333333333333); color: colorSliderRoot.colors.length > 1 ? colorSliderRoot._hex(colorSliderRoot.colors[1]) : "transparent" }
+            GradientStop { position: colorSliderRoot.stopAt(0.16666666666666666); color: colorSliderRoot.colors.length > 2 ? colorSliderRoot._hex(colorSliderRoot.colors[2]) : "transparent" }
+            GradientStop { position: colorSliderRoot.stopAt(0.25); color: colorSliderRoot.colors.length > 3 ? colorSliderRoot._hex(colorSliderRoot.colors[3]) : "transparent" }
+            GradientStop { position: colorSliderRoot.stopAt(0.3333333333333333); color: colorSliderRoot.colors.length > 4 ? colorSliderRoot._hex(colorSliderRoot.colors[4]) : "transparent" }
+            GradientStop { position: colorSliderRoot.stopAt(0.4166666666666667); color: colorSliderRoot.colors.length > 5 ? colorSliderRoot._hex(colorSliderRoot.colors[5]) : "transparent" }
+            GradientStop { position: colorSliderRoot.stopAt(0.5); color: colorSliderRoot.colors.length > 6 ? colorSliderRoot._hex(colorSliderRoot.colors[6]) : "transparent" }
+            GradientStop { position: colorSliderRoot.stopAt(0.5833333333333334); color: colorSliderRoot.colors.length > 7 ? colorSliderRoot._hex(colorSliderRoot.colors[7]) : "transparent" }
+            GradientStop { position: colorSliderRoot.stopAt(0.6666666666666666); color: colorSliderRoot.colors.length > 8 ? colorSliderRoot._hex(colorSliderRoot.colors[8]) : "transparent" }
+            GradientStop { position: colorSliderRoot.stopAt(0.75); color: colorSliderRoot.colors.length > 9 ? colorSliderRoot._hex(colorSliderRoot.colors[9]) : "transparent" }
+            GradientStop { position: colorSliderRoot.stopAt(0.8333333333333334); color: colorSliderRoot.colors.length > 10 ? colorSliderRoot._hex(colorSliderRoot.colors[10]) : "transparent" }
+            GradientStop { position: colorSliderRoot.stopAt(0.9166666666666666); color: colorSliderRoot.colors.length > 11 ? colorSliderRoot._hex(colorSliderRoot.colors[11]) : "transparent" }
+            GradientStop { position: colorSliderRoot.stopAt(1.0); color: colorSliderRoot.colors.length > 12 ? colorSliderRoot._hex(colorSliderRoot.colors[12]) : "transparent" }
         }
     }
 
@@ -128,7 +153,7 @@ Item {
         width: colorSliderRoot.indicatorSize
         height: colorSliderRoot.indicatorSize
         anchors.verticalCenter: parent.verticalCenter
-        x: colorSliderRoot.value * colorSliderRoot._effectiveWidth
+        x: Math.max(0, Math.min(1, colorSliderRoot.value)) * colorSliderRoot._effectiveWidth
             + colorSliderRoot.height / 2 - colorSliderRoot.indicatorSize / 2
 
         Rectangle {
@@ -161,6 +186,7 @@ Item {
         // Open at press so a vertical flick still scrolls the page; closed once this
         // is a horizontal drag, so drifting off-axis cannot hand it to the Flickable.
         preventStealing: colorSliderRoot._dragActive
+        enabled: colorSliderRoot.enabled
 
         onPressed: (mouse) => {
             colorSliderRoot._pressX = mouse.x

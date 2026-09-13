@@ -21,3 +21,17 @@ metrics follow the same reference commit noted above.
 The RadioButton check path and TextField chrome metrics are adapted from
 basic/RadioButton.kt and basic/TextField.kt, Copyright 2025 compose-miuix-ui
 contributors, Apache License 2.0, at the same reference commit.
+
+NavigationBar and TabRow geometry, colors, and display-state behavior follow
+basic/NavigationBar.kt and basic/TabRow.kt from the same upstream revision.
+
+NavigationRail geometry follows basic/NavigationRail.kt (Copyright 2025),
+and badge metrics/bounds follow basic/Badge.kt (Copyright 2026), by
+compose-miuix-ui contributors, Apache License 2.0.
+
+TopAppBar, FloatingActionButton, FloatingToolbar, Snackbar, Tooltip, progress
+indicators, NumberPicker and PullToRefresh metrics follow the same reference.
+MonetScheme.qml adapts theme/MonetMapping.kt; ColorMath.qml adapts the color
+matrices and OkHSV transforms from color/core/Transforms.kt, Copyright 2025
+compose-miuix-ui contributors, Apache License 2.0. The OkHSV gamut boundary
+is solved numerically instead of using the reference polynomial approximation.

@@ -12,6 +12,14 @@ Item {
     property bool toggleOnClick: true
 
     signal clicked()
+    activeFocusOnTab: true
+    function activate() {
+        if (!enabled) return
+        if (toggleOnClick) { checked = !checked; }
+        clicked()
+    }
+    Keys.onSpacePressed: { activate(); event.accepted = true }
+    Keys.onReturnPressed: { activate(); event.accepted = true }
 
     implicitWidth: rowLayout.implicitWidth
     implicitHeight: Math.max(28, rowLayout.implicitHeight)

@@ -16,6 +16,9 @@ Item {
     property bool focused: enabled && activeFocus
     property Item contentItem
     signal clicked()
+    activeFocusOnTab: true
+    Keys.onReturnPressed: { if (enabled) clicked(); event.accepted = true }
+    Keys.onSpacePressed: { if (enabled) clicked(); event.accepted = true }
 
     property var _colors: Theme.color
 
@@ -107,6 +110,6 @@ Item {
         anchors.fill: parent
         enabled: control.enabled
         hoverEnabled: true
-        onClicked: control.clicked()
+        onClicked: { control.forceActiveFocus(); control.clicked() }
     }
 }

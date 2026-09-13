@@ -9,6 +9,8 @@ Item {
     id: badgedBoxRoot
 
     property Component badge: null
+    // Optional bounds in this anchor's coordinates, matching upstream top/end rulers.
+    property var badgeBounds: null
     default property alias content: anchorContainer.data
 
     implicitWidth: anchorContainer.childrenRect.width
@@ -21,14 +23,18 @@ Item {
 
     Loader {
         id: badgeLoader
+        objectName: "miuixBadgePlacement"
         sourceComponent: badgedBoxRoot.badge
         width: item ? item.implicitWidth : 0
         height: item ? item.implicitHeight : 0
         // BadgeDefaults.Size is 6dp; anything wider carries content and uses the
         // 12/14dp offsets instead of the 6/6dp dot offsets.
         readonly property bool hasContent: width > 6
-        x: badgedBoxRoot.width - (hasContent ? 12 : 6)
-        y: -height + (hasContent ? 14 : 6)
+        x: badgedBoxRoot.badgeBounds
+            ? Math.min(badgedBoxRoot.width - (hasContent ? 12 : 6), badgedBoxRoot.badgeBounds.x + badgedBoxRoot.badgeBounds.width - width)
+            : badgedBoxRoot.width - (hasContent ? 12 : 6)
+        y: badgedBoxRoot.badgeBounds ? Math.max(-height + (hasContent ? 14 : 6), badgedBoxRoot.badgeBounds.y)
+            : -height + (hasContent ? 14 : 6)
         z: 1
     }
 }

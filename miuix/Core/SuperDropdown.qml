@@ -17,6 +17,16 @@ Item {
     readonly property string currentValue: currentIndex >= 0 && currentIndex < items.length ? itemText(items[currentIndex]) : ""
     signal clicked()
     signal activated(int index)
+    activeFocusOnTab: true
+    property int highlightedIndex: currentIndex
+    function moveHighlight(delta) {
+        for (var i = 1; i <= items.length; i++) {
+            var next = (highlightedIndex + delta * i + items.length) % items.length
+            if (itemEnabled(items[next])) { highlightedIndex = next; return }
+        }
+    }
+    Keys.onReturnPressed: { openMenu(); event.accepted = true }
+    Keys.onSpacePressed: { openMenu(); event.accepted = true }
 
     width: parent ? parent.width : 320
     implicitHeight: preference.implicitHeight
@@ -62,6 +72,8 @@ Item {
         positionPopup()
         if (!menuOpen) _progress = 0
         overlayLayer.visible = true
+        highlightedIndex = currentIndex
+        overlayLayer.forceActiveFocus()
         viewport.contentY = 0
         enterAnim.start()
         selectionTimer.restart()
@@ -120,6 +132,10 @@ Item {
     }
     Item {
         id: overlayLayer
+        Keys.onEscapePressed: { superDropdownRoot.closeMenu(); event.accepted = true }
+        Keys.onDownPressed: { superDropdownRoot.moveHighlight(1); event.accepted = true }
+        Keys.onUpPressed: { superDropdownRoot.moveHighlight(-1); event.accepted = true }
+        Keys.onReturnPressed: { superDropdownRoot.select(superDropdownRoot.highlightedIndex); event.accepted = true }
         visible: false
         z: 99999
         MouseArea {

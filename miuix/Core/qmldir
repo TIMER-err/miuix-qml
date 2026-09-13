@@ -57,3 +57,9 @@ SuperDropdown 1.0 SuperDropdown.qml
 BasicComponent 1.0 BasicComponent.qml
 Icon 1.0 Icon.qml
 SmoothRectangle 1.0 SmoothRectangle.qml
+
+NavigationRailBody 1.0 NavigationRailBody.qml
+MonetScheme 1.0 MonetScheme.qml
+PullToRefresh 1.0 PullToRefresh.qml
+singleton ColorMath 1.0 ColorMath.qml
+singleton PopupRegistry 1.0 PopupRegistry.qml

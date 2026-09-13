@@ -4,9 +4,6 @@ import miuix.Core
 // Ports miuix basic/ColorPicker.kt's HsvColorPicker: a preview capsule above the
 // hue / saturation / value / alpha sliders.
 //
-// qml4j divergence: upstream's `colorSpace` also accepts OKHSV / OKLAB / OKLCH,
-// which need the OkLab pipeline from its color module. Only HSV is ported, so
-// `colorSpace` is accepted but always resolves to HSV.
 Item {
     id: colorPickerRoot
 
@@ -21,6 +18,19 @@ Item {
     property real _saturation: 1
     property real _value: 1
     property real _alpha: 1
+    property real _first: 0
+    property real _second: 0
+    property real _third: 0
+    readonly property string _space: colorSpace.toUpperCase()
+    readonly property bool _hsv: _space === "HSV"
+    function channelColor(x, y, z, alpha) { return ColorMath.fromChannels(_space, x, y, z, alpha) }
+    function samples(axis, x, y, z, alpha, space) {
+        var result = []
+        for (var i = 0; i <= 12; i++) result.push(ColorMath.fromChannels(space,
+            axis === 0 ? i / 12 : x, axis === 1 ? i / 12 : y, axis === 2 ? i / 12 : z, alpha))
+        return result
+    }
+    onColorSpaceChanged: _adoptExternalColor()
     property bool _syncing: false
 
     implicitWidth: 320
@@ -55,7 +65,7 @@ Item {
         return { h: h, s: max === 0 ? 0 : d / max, v: max }
     }
 
-    readonly property color _selectedColor: _hsvColor(_hue, _saturation, _value, _alpha)
+    readonly property color _selectedColor: _hsv ? _hsvColor(_hue, _saturation, _value, _alpha) : channelColor(_first, _second, _third, _alpha)
 
     function _emit() {
         _syncing = true
@@ -71,6 +81,10 @@ Item {
         _saturation = hsv.s
         _value = hsv.v
         _alpha = color.a
+        if (!_hsv) {
+            var channels = ColorMath.channels(_space, color)
+            _first = channels[0]; _second = channels[1]; _third = channels[2]
+        }
     }
 
     onColorChanged: _adoptExternalColor()
@@ -90,47 +104,57 @@ Item {
         }
 
         ColorSlider {
+            enabled: colorPickerRoot.enabled
             width: parent.width
             height: colorPickerRoot.sliderHeight
-            value: colorPickerRoot._hue / 360
+            value: colorPickerRoot._hsv ? colorPickerRoot._hue / 360 : colorPickerRoot._first
+            colors: colorPickerRoot._hsv ? [] : colorPickerRoot.samples(0, colorPickerRoot._first, colorPickerRoot._second, colorPickerRoot._third, 1, colorPickerRoot._space)
             hue: true
             onMoved: (newValue) => {
-                colorPickerRoot._hue = newValue * 360
+                if (colorPickerRoot._hsv) colorPickerRoot._hue = newValue * 360
+                else colorPickerRoot._first = newValue
                 colorPickerRoot._emit()
             }
         }
 
         ColorSlider {
+            enabled: colorPickerRoot.enabled
             width: parent.width
             height: colorPickerRoot.sliderHeight
-            value: colorPickerRoot._saturation
+            value: colorPickerRoot._hsv ? colorPickerRoot._saturation : colorPickerRoot._second
+            colors: colorPickerRoot._hsv ? [] : colorPickerRoot.samples(1, colorPickerRoot._first, colorPickerRoot._second, colorPickerRoot._third, 1, colorPickerRoot._space)
             startColor: colorPickerRoot._hsvColor(colorPickerRoot._hue, 0, 1, 1)
             endColor: colorPickerRoot._hsvColor(colorPickerRoot._hue, 1, 1, 1)
             onMoved: (newValue) => {
-                colorPickerRoot._saturation = newValue
+                if (colorPickerRoot._hsv) colorPickerRoot._saturation = newValue
+                else colorPickerRoot._second = newValue
                 colorPickerRoot._emit()
             }
         }
 
         ColorSlider {
+            enabled: colorPickerRoot.enabled
             width: parent.width
             height: colorPickerRoot.sliderHeight
-            value: colorPickerRoot._value
+            value: colorPickerRoot._hsv ? colorPickerRoot._value : colorPickerRoot._third
+            colors: colorPickerRoot._hsv ? [] : colorPickerRoot.samples(2, colorPickerRoot._first, colorPickerRoot._second, colorPickerRoot._third, 1, colorPickerRoot._space)
             startColor: colorPickerRoot._hsvColor(colorPickerRoot._hue, colorPickerRoot._saturation, 0, 1)
             endColor: colorPickerRoot._hsvColor(colorPickerRoot._hue, colorPickerRoot._saturation, 1, 1)
             onMoved: (newValue) => {
-                colorPickerRoot._value = newValue
+                if (colorPickerRoot._hsv) colorPickerRoot._value = newValue
+                else colorPickerRoot._third = newValue
                 colorPickerRoot._emit()
             }
         }
 
         ColorSlider {
+            enabled: colorPickerRoot.enabled
             width: parent.width
             height: colorPickerRoot.sliderHeight
             checkerboard: true
             value: colorPickerRoot._alpha
-            startColor: colorPickerRoot._hsvColor(colorPickerRoot._hue, colorPickerRoot._saturation, colorPickerRoot._value, 0)
-            endColor: colorPickerRoot._hsvColor(colorPickerRoot._hue, colorPickerRoot._saturation, colorPickerRoot._value, 1)
+            startColor: Qt.rgba(colorPickerRoot._selectedColor.r, colorPickerRoot._selectedColor.g, colorPickerRoot._selectedColor.b, 0)
+            endColor: Qt.rgba(colorPickerRoot._selectedColor.r, colorPickerRoot._selectedColor.g, colorPickerRoot._selectedColor.b, 1)
             onMoved: (newValue) => {
                 colorPickerRoot._alpha = newValue
                 colorPickerRoot._emit()

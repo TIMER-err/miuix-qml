@@ -8,6 +8,9 @@ Item {
     property bool checked: false
     property string text: ""
     signal clicked()
+    activeFocusOnTab: true
+    Keys.onReturnPressed: { if (enabled) clicked(); event.accepted = true }
+    Keys.onSpacePressed: { if (enabled) clicked(); event.accepted = true }
     implicitWidth: 26 + (text.length > 0 ? 12 + label.implicitWidth : 0)
     implicitHeight: Math.max(26, label.implicitHeight)
 
@@ -66,6 +69,6 @@ Item {
         id: hitArea
         anchors.fill: parent
         enabled: radioRoot.enabled
-        onClicked: radioRoot.clicked()
+        onClicked: { radioRoot.forceActiveFocus(); radioRoot.clicked() }
     }
 }

@@ -13,6 +13,9 @@ Item {
     property bool pressed: enabled && pressArea.pressed
     property bool focused: enabled && activeFocus
     signal clicked()
+    activeFocusOnTab: true
+    Keys.onReturnPressed: { if (enabled) clicked(); event.accepted = true }
+    Keys.onSpacePressed: { if (enabled) clicked(); event.accepted = true }
 
     property var _colors: Theme.color
 
@@ -50,7 +53,7 @@ Item {
             anchors.fill: parent
             radius: parent.radius
             color: _colors.onBackground
-            opacity: control.pressed ? 0.10 : (control.hovered ? 0.06 : 0)
+            opacity: (control.pressed ? 0.10 : 0) + (control.hovered ? 0.06 : 0) + (control.focused ? 0.08 : 0)
             Behavior on opacity { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
         }
 
@@ -68,6 +71,6 @@ Item {
         anchors.fill: parent
         enabled: control.enabled
         hoverEnabled: true
-        onClicked: control.clicked()
+        onClicked: { control.forceActiveFocus(); control.clicked() }
     }
 }

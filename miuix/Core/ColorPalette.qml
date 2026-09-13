@@ -248,6 +248,7 @@ Item {
             // alone must not change the color, or scrolling the page through the grid
             // repaints it -- the same rule the sliders follow.
             MouseArea {
+            enabled: colorPaletteRoot.enabled
                 id: gridArea_mouse
                 anchors.fill: parent
                 preventStealing: colorPaletteRoot._picking
@@ -287,6 +288,7 @@ Item {
         }
 
         ColorSlider {
+            enabled: colorPaletteRoot.enabled
             width: parent.width
             height: 26
             checkerboard: true

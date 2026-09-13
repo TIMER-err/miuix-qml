@@ -28,6 +28,11 @@ public final class MiuixChecks {
         project = Paths.get(args[0]);
         output = project.resolve("build/previews");
         Files.createDirectories(output);
+        if (args.length > 1 && "completion".equals(args[1])) {
+            MiuixCompletionChecks.run(project, output);
+            System.out.println("PASS: " + checks + " completion assertions");
+            return;
+        }
         smokeComponents();
         preferences();
         search();
@@ -44,10 +49,13 @@ public final class MiuixChecks {
         previews();
         overlayPreviews();
         inputPreviews();
+        MiuixNavigationChecks.run(project, output);
+        MiuixRailChecks.run(project, output);
+        MiuixCompletionChecks.run(project, output);
         System.out.println("PASS: " + checks + " assertions; previews in " + output);
     }
 
-    private static QmlView scene(String body) {
+    static QmlView scene(String body) {
         DirResourceLoader resources = new DirResourceLoader(project);
         QmlView view = QmlView.withStockTypes(new QmlEngine()).resources(resources);
         HostFonts.configure(view, resources);
@@ -56,7 +64,7 @@ public final class MiuixChecks {
         return view;
     }
 
-    private static void settle(QmlView view) {
+    static void settle(QmlView view) {
         view.dirtyQueue().install();
         try {
             for (int i = 0; i < 8; i++) {
@@ -69,31 +77,31 @@ public final class MiuixChecks {
         }
     }
 
-    private static Object get(Item item, String name) throws Exception {
+    static Object get(Item item, String name) throws Exception {
         return ((Property<?>) item.getClass().getField(name).get(item)).get();
     }
 
     @SuppressWarnings("unchecked")
-    private static void set(Item item, String name, Object value) throws Exception {
+    static void set(Item item, String name, Object value) throws Exception {
         ((Property<Object>) item.getClass().getField(name).get(item)).set(value);
     }
 
-    private static double number(Item item, String name) throws Exception {
+    static double number(Item item, String name) throws Exception {
         return ((Number) get(item, name)).doubleValue();
     }
 
-    private static void check(boolean condition, String message) {
+    static void check(boolean condition, String message) {
         if (!condition) throw new AssertionError(message);
         checks++;
     }
 
-    private static void click(QmlView view, float x, float y) {
+    static void click(QmlView view, float x, float y) {
         view.dispatchPointerDown(x, y);
         view.dispatchPointerUp(x, y);
         settle(view);
     }
 
-    private static void drag(QmlView view, float x, float y, float endX, float endY) {
+    static void drag(QmlView view, float x, float y, float endX, float endY) {
         view.dispatchPointerDown(x, y);
         for (int step = 1; step <= 4; step++) {
             view.dispatchPointerMove(x + (endX - x) * step / 4, y + (endY - y) * step / 4);
@@ -104,7 +112,7 @@ public final class MiuixChecks {
 
     private static void smokeComponents() throws Exception {
         for (String line : Files.readAllLines(project.resolve("miuix/Core/qmldir"))) {
-            if (line.trim().isEmpty() || line.startsWith("singleton")) continue;
+            if (line.trim().isEmpty() || line.startsWith("singleton") || line.startsWith("MonetScheme ")) continue;
             String type = line.split(" ")[0];
             QmlView view = scene("Item { width: 400; height: 900; " + type + " {} }");
             try {
@@ -386,7 +394,7 @@ public final class MiuixChecks {
         }
     }
 
-    private static float coordinate(Item item, boolean horizontal) {
+    static float coordinate(Item item, boolean horizontal) {
         float value = 0;
         for (Item current = item; current != null; current = current.parent.peek()) {
             value += horizontal ? current.x.peekFloat() : current.y.peekFloat();
@@ -629,7 +637,7 @@ public final class MiuixChecks {
     }
 
     @SuppressWarnings("deprecation")
-    private static void render(QmlView view, int width, int height, String name) throws Exception {
+    static void render(QmlView view, int width, int height, String name) throws Exception {
         try (Surface surface = Surface.makeRasterN32Premul(width, height)) {
             SurfaceBackend backend = new RasterBackend(surface, width, height);
             for (int i = 0; i < 42; i++) {

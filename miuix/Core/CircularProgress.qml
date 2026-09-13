@@ -7,15 +7,17 @@ Item {
     property bool indeterminate: false
     property bool showTrack: true
     property bool wavy: false
+    property real strokeWidth: 4
+    readonly property real progress: Math.max(0, Math.min(1, value))
     
-    implicitWidth: 48
-    implicitHeight: 48
+    implicitWidth: 30
+    implicitHeight: 30
     
     property var _colors: Theme.color
     
     // Explicit bindings to trigger repaint on theme change
-    property color _primaryColor: Theme.color.primary
-    property color _surfaceContainerHighestColor: Theme.color.surfaceContainerHighest
+    property color _primaryColor: enabled ? Theme.color.primary : Theme.color.disabledPrimarySlider
+    property color _surfaceContainerHighestColor: Theme.color.secondaryContainer
     
     on_PrimaryColorChanged: canvas.requestPaint()
     on_SurfaceContainerHighestColorChanged: canvas.requestPaint()
@@ -23,7 +25,7 @@ Item {
     // Internal animation properties
     property real _rotation: 0
     property real _arcOffset: 0
-    property real _arcSweep: 0
+    property real _arcSweep: 30
     
     // Wavy properties
     property real _wavyPhase: 0
@@ -46,7 +48,7 @@ Item {
             // Reset animation state when entering indeterminate mode
             _rotation = 0
             _arcOffset = 0
-            _arcSweep = 10
+            _arcSweep = 30
         }
     }
     
@@ -55,35 +57,18 @@ Item {
     onWavyChanged: canvas.requestPaint()
     on_WavyPhaseChanged: canvas.requestPaint()
 
-    // Indeterminate Animations
-    ParallelAnimation {
+    NumberAnimation on _rotation {
+        from: 0; to: 360; duration: 1000
+        loops: Animation.Infinite
+        running: control.indeterminate && control.visible && !control.wavy
+    }
+    SequentialAnimation {
         running: control.indeterminate && control.visible && !control.wavy
         loops: Animation.Infinite
-        
-        // Continuous body rotation
-        NumberAnimation {
-            target: control
-            property: "_rotation"
-            from: 0
-            to: 360
-            duration: 2000
-        }
-        
-        // Arc expansion/contraction
-        SequentialAnimation {
-            // Expand (Head moves fast, Tail moves slow)
-            ParallelAnimation {
-                NumberAnimation { target: control; property: "_arcSweep"; from: 10; to: 300; duration: 1000; easing.type: Easing.InOutCubic }
-                NumberAnimation { target: control; property: "_arcOffset"; from: 0; to: 50; duration: 1000; easing.type: Easing.InOutCubic }
-            }
-            // Contract (Head moves slow, Tail moves fast)
-            ParallelAnimation {
-                NumberAnimation { target: control; property: "_arcSweep"; from: 300; to: 10; duration: 1000; easing.type: Easing.InOutCubic }
-                NumberAnimation { target: control; property: "_arcOffset"; from: 50; to: 360; duration: 1000; easing.type: Easing.InOutCubic }
-            }
-        }
+        NumberAnimation { target: control; property: "_arcSweep"; from: 30; to: 120; duration: 800 }
+        NumberAnimation { target: control; property: "_arcSweep"; from: 120; to: 30; duration: 800 }
     }
-    
+    onStrokeWidthChanged: canvas.requestPaint()
     // Wavy Indeterminate Animation (Just rotation)
     NumberAnimation {
         target: control
@@ -115,7 +100,7 @@ Item {
             var h = height;
             var centerX = w / 2;
             var centerY = h / 2;
-            var lineWidth = 4;
+            var lineWidth = Math.max(0, Math.min(control.strokeWidth, Math.min(w, h)));
             var radius = Math.min(w, h) / 2 - lineWidth / 2; 
             
             ctx.lineWidth = lineWidth;
@@ -171,7 +156,7 @@ Item {
                 } else {
                     // Determinate
                     if (control.value > 0) {
-                        end = control.value * Math.PI * 2;
+                        end = control.progress * Math.PI * 2;
                         drawWavyArc(0, end, control._primaryColor);
                     }
                 }
@@ -179,7 +164,7 @@ Item {
             } else {
                 // Standard Implementation
                 // Draw Track (only for determinate)
-                if (!control.indeterminate && control.showTrack) {
+                if (control.showTrack) {
                     ctx.beginPath();
                     ctx.strokeStyle = control._surfaceContainerHighestColor;
                     ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
@@ -207,10 +192,9 @@ Item {
                     ctx.arc(centerX, centerY, radius, startAngle, endAngle, false);
                     ctx.stroke();
                 } else {
-                    // Determinate
-                    if (control.value > 0) {
+                    {
                         startAngle = -Math.PI / 2; // -90 degrees (12 o'clock)
-                        endAngle = startAngle + (control.value * 2 * Math.PI);
+                        endAngle = startAngle + ((0.1 + 359.9 * control.progress) * Math.PI / 180);
                         ctx.arc(centerX, centerY, radius, startAngle, endAngle, false);
                         ctx.stroke();
                     }

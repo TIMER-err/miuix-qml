@@ -11,6 +11,14 @@ Item {
     property bool toggleOnClick: true
     readonly property bool _visualChecked: checked || indeterminate
     signal clicked()
+    activeFocusOnTab: true
+    function activate() {
+        if (!enabled) return
+        if (toggleOnClick) { checked = !checked; indeterminate = false; }
+        clicked()
+    }
+    Keys.onSpacePressed: { activate(); event.accepted = true }
+    Keys.onReturnPressed: { activate(); event.accepted = true }
 
     property var _colors: Theme.color
 

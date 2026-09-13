@@ -1,11 +1,33 @@
 pragma Singleton
 import QtQuick
+import miuix.Core
 
 QtObject {
+    id: themeRoot
+    property bool dynamicColors: false
+    readonly property color seedColor: StyleManager.seedColor
+    function setSeedColor(value) { StyleManager.seedColor = String(value) }
+    function setDark(value) { StyleManager.isDarkTheme = value; dark = value }
+    property QtObject monet: MonetScheme { dark: themeRoot.dark }
     property bool dark: StyleManager.isDarkTheme
-    property var color: dark ? schemes.dark : schemes.light
+    property var color: dynamicColors ? monet : (dark ? schemes.dark : schemes.light)
     property QtObject schemes: QtObject {
         property QtObject light: QtObject {
+            property color primaryVariant: "#3482FF"
+            property color onPrimaryVariant: "#AECDFF"
+            property color secondaryContainerVariant: "#F0F0F0"
+            property color onSecondaryContainerVariant: "#A8A8A8"
+            property color tertiaryContainerVariant: "#EAF2FF"
+            property color disabledOnSurface: "#B2B2B2"
+            property color onSurfaceContainerVariant: "#959595"
+            property color onSurfaceContainerHighest: "#000000"
+            property color onPrimaryContainer: onPrimaryContainerColor
+            property color onSecondary: onSecondaryColor
+            property color onSecondaryContainer: onSecondaryContainerColor
+            property color onTertiaryContainer: onTertiaryContainerColor
+            property color onSurface: onSurfaceColor
+            property color onError: onErrorColor
+            property color onErrorContainer: onErrorContainerColor
             property color disabledSecondary: "#F0F0F0"
             property color disabledOnSecondary: "#FCFCFC"
             property color disabledPrimaryButton: "#C2D9FF"
@@ -68,6 +90,21 @@ QtObject {
             property color windowDimming: "#4D000000"
         }
         property QtObject dark: QtObject {
+            property color primaryVariant: "#0073DD"
+            property color onPrimaryVariant: "#99C7F1"
+            property color secondaryContainerVariant: "#4F4F4F"
+            property color onSecondaryContainerVariant: "#959595"
+            property color tertiaryContainerVariant: "#505050"
+            property color disabledOnSurface: "#666666"
+            property color onSurfaceContainerVariant: "#737373"
+            property color onSurfaceContainerHighest: "#E9E9E9"
+            property color onPrimaryContainer: onPrimaryContainerColor
+            property color onSecondary: onSecondaryColor
+            property color onSecondaryContainer: onSecondaryContainerColor
+            property color onTertiaryContainer: onTertiaryContainerColor
+            property color onSurface: onSurfaceColor
+            property color onError: onErrorColor
+            property color onErrorContainer: onErrorContainerColor
             property color disabledSecondary: "#3F3F3F"
             property color disabledOnSecondary: "#797979"
             property color disabledPrimaryButton: "#253E64"

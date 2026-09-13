@@ -22,6 +22,9 @@ QML4J_DARK=true ./run.sh
 ./run.sh showcases/MiuixGalleryShowcase.qml
 ./run.sh showcases/MiuixOverlayShowcase.qml
 ./run.sh showcases/MiuixInputShowcase.qml
+./run.sh showcases/MiuixNavigationShowcase.qml
+./run.sh showcases/MiuixRailShowcase.qml
+./run.sh showcases/MiuixCompleteShowcase.qml
 ```
 
 Set `QML4J_DIR=/path/to/qml4j` for another location. The launcher rebuilds the local engine and places its compiled classes before Maven dependencies, so it runs the current source. The default showcase switches between one and two columns at 760 px, and the sun/moon action changes the theme live.
@@ -80,6 +83,10 @@ Preference rows wrap their text and compute their height from content plus 16 px
 | `Ripple` | Flat Miuix indication with additive hover/focus/press alpha; existing long-press and corner APIs retained |
 | `TextField` | Continuous background, 2 px focus border, internal 17/10 px label, password/clear actions and wrapping helper text |
 | `RadioButton` | Upstream 26 px vector check with animated drawing and press feedback; selection remains controlled by the caller |
+| `NavigationBar` | 64 px items with 26 px icons and 12 px labels, three display modes, optional divider/inset, controlled selection and disabled entries |
+| `NavigationRail` | Synchronized 80/240 px expansion, 28 px icons, 12/16 px labels, scrollable menu, fixed footer and configurable content slots |
+| `Badge`, `BadgedBox` | 6 px dots, 16 px minimum number badges, 11 px white labels, measured custom content and optional top/end bounds |
+| `TabRow`, `TabRowWithContour` | Continuous corners and outlines, automatic selection reveal, horizontal scrolling, empty/disabled states |
 | `Theme` | Mutable `dark`, shared `metrics`, dedicated disabled button/switch/slider colors |
 
 The overlay showcase demonstrates confirmation and long-content dialogs, plus a dropdown with summaries and disabled entries. `Dialog` accepts `maxWidth`, `cornerRadius`, `padding`, `outsideMargin`, `topInset`, `bottomInset`, and a `largeScreen` override. By default it centers when the window is at least 840 × 480; otherwise it slides up from the bottom. Two actions stack when their labels cannot fit side by side. Repeated `open()` / `close()` calls are guarded, and reopening cancels a pending close.
@@ -89,6 +96,14 @@ Dropdown entries may be strings or `{ text, summary, enabled }` objects. `popupW
 `TextField` keeps its label inline while empty, including when focused. With text, the label shrinks inside the field; `useLabelAsPlaceholder: true` hides it instead. `cornerRadius`, `horizontalPadding`, `verticalPadding`, `backgroundColor`, `labelColor`, and `borderColor` customize the chrome. The existing `type: "outlined"` option adds a resting outline. `clearButtonEnabled`, `clear()`, `cleared()`, and `focusInput()` control the clear action and focus. Password, custom trailing action, error indicator, and clear action share one slot. Supporting/error text wraps and contributes to `implicitHeight`.
 
 `RadioButton.checked` is controlled: update it in `onClicked`, or bind it to a shared selected value. Clicking the marker, label, or space between them emits one signal. Long labels wrap within the assigned width.
+
+`NavigationBar` retains its content stack: supply `{ icon, text, enabled, badge }` entries in `model` and corresponding content children. `mode` accepts `"iconAndText"`, `"iconOnly"`, or `"iconWithSelectedLabel"`. `showDivider` defaults to true; `bottomInset` reserves any host-provided safe area. For external state, set `selectOnClick: false`, bind `currentIndex`, and handle `activated(index)`. The bar uses Miuix icon/label emphasis without a selected capsule background.
+
+`NavigationRail` uses the same entry format. It is expandable by default: `extended` controls expansion, and `showToggle` controls the built-in button. Set `expandable: false` for the upstream classic rail without a selection pill or toggle. `minWidth` and `expandedWidth` default to 80 and 240; all morphing geometry follows one animation progress. `header`, `headerActions`, `footer`, `sectionLabel`, and `delegate` remain available. The footer stays fixed while the menu scrolls. A custom delegate can read `parent.itemData`, `parent.itemIndex`, and `parent.selected`. Controlled selection uses `selectOnClick: false` and `itemClicked(index, itemData)`.
+
+For navigation badges, omit `badge` or use `null` to hide it, `""` for a dot, or a short string/number for content. `BadgedBox.badgeBounds` optionally supplies `{ x, y, width, height }` in anchor coordinates; badges clamp to its top and right edges. Navigation supplies these bounds automatically. `Badge.text` supplies its own 11 px label styling; custom content sets its own colors and fonts and contributes its measured size.
+
+Both tab rows support `selectOnClick: false` with `tabSelected(index)`. Standard tabs default to content-sized widths so category names remain complete and overflow scrolls horizontally. Width measurement reserves the bold selected state, avoiding shifts when selection changes. Set `equalWidth: true` for the upstream equal-width/eliding layout; contour tabs keep that mode by default. `minWidth` applies in both modes; `maxWidth` participates only in equal-width calculation. The selected tab is revealed on initial layout and after external state or size changes; subsequent selections animate scrolling. Dragging scrolls the strip without selecting a tab. Empty lists hide the indicator and reset scrolling.
 
 For a controlled dropdown, set `selectOnClick: false`, bind `currentIndex` to application state, and update that state in `onActivated`. This preserves the binding when another control changes the selected value.
 
@@ -109,12 +124,56 @@ Slider {
 
 Sliders capture a gesture after horizontal intent is established. Tapping leaves the value unchanged; vertical drags can scroll a surrounding `Flickable`. `stepSize > 0` snaps drag values. `firstMoved()` / `secondMoved()` identify the active range handle; `editingFinished()` fires once at the end of a drag. Endpoints clamp rather than cross. Use `from < to` and ordered initial range values.
 
+## Monet colors
+
+Miuix uses qml4j's built-in `StyleManager` for HCT seed generation. Enable the mapped palette explicitly; the original Miuix light/dark colors remain the default:
+
+```qml
+Component.onCompleted: {
+    Theme.dynamicColors = true
+    Theme.setSeedColor("#109868")
+    Theme.setDark(false)
+}
+```
+
+`StyleManager.seedColor` and `StyleManager.setSeedColorHct(hue, chroma, tone)` also update the library reactively. `StyleManager.isDarkTheme` drives `Theme.dark` unless the application has assigned its own binding/value to `Theme.dark`; `Theme.setDark()` updates both. The mapping includes foreground contrast roles, layered surfaces, errors, disabled controls and slider colors, following upstream `theme/MonetMapping.kt`. This uses supplied seed colors: the engine's `setSourceImage()` currently does not extract a wallpaper color.
+
+The [complete showcase](showcases/MiuixCompleteShowcase.qml) connects color swatches, `ColorPicker` and `ColorPalette` to the native seed and provides a live dynamic-color switch.
+
+## App bars, feedback and refresh
+
+`TopAppBar` defaults to the large 32 px title with a 52 px collapsed bar. Bind `flickable` to a scrolling page, or bind `scrollOffset` yourself. `large: false` provides the small bar. `subtitle`, `largeTitle`, `titlePadding` and `topInset` customize the layout. When combining with `PullToRefresh`, bind `scrollOffset` to its logical `scrollOffset`, not to the reserved header offset of its internal Flickable.
+
+`Snackbar` supports a wrapped message, a primary action pill and optional `withDismissAction`. `ToolTip` supports plain/rich content (`title`, `text`, `actionText`), `anchorItem`, four placements, edge clamping and vertical/horizontal flipping. `timeout: 0` makes either persistent; `open()`/`close()` tolerate interrupted transitions. Menu entries retain their action/submenu API, with keyboard navigation and disabled-item skipping. Dialog `closeOnEscape` is independent of `closeOnScrim`, and closing restores the earlier focus.
+
+`LinearProgress` uses a 6 px track, `CircularProgress` uses a 30 px circle with 4 px stroke, and `LoadingIndicator` uses the upstream 20 px ring/orbiting dot. Values clamp to 0–1. The optional wavy progress style remains a QML extension.
+
+`NumberPicker` renders a bounded strip regardless of range size, with 32 px text, continuous fade/scale/color, release velocity, animated snapping and arrow-key stepping. `ColorPicker.colorSpace` supports `HSV`, `OKHSV`, `OKLAB` and `OKLCH`. External colors and alpha synchronize across modes; slider gradients place endpoint colors under the indicator centers. OKLAB/OKLCH follow the reference library's channel conversion; OKHSV finds the gamut boundary numerically and samples its displayed gradients.
+
+```qml
+PullToRefresh {
+    id: refresh
+    anchors.fill: parent
+    onRefreshRequested: {
+        refreshing = true
+        // Start the application's asynchronous reload here.
+    }
+    Column {
+        width: refresh.width
+        // Scrollable content, including interactive controls.
+    }
+}
+```
+
+Set `refreshing = false` when the reload finishes. Raising it programmatically shows the indicator without emitting `refreshRequested`. The component owns its Flickable and exposes `flickable`, `contentHeight`, `scrollOffset`, `progress`, `pullDistance` and `refreshState`. Use its default content slot for the page instead of wrapping another full-page Flickable. The implementation reserves scroll space for the refresh indicator because the current engine does not implement native overscroll; it is not Compose's nested-scroll/spring physics.
+
 ## Verification
 
 Requires Maven and JDK 11 or newer for the check runner:
 
 ```bash
 ./tools/verify.sh
+./tools/verify.sh gpu  # requires a working desktop OpenGL session
 mvn -f ../qml4j/pom.xml -pl qml4j-demo-desktop -am verify
 ```
 
@@ -122,7 +181,7 @@ This alignment pass changes only the component library. It uses the existing eng
 
 The integration runner loads every exported component, dispatches pointer and keyboard events, checks resizing and theme updates, and writes light/dark previews at 390 and 1040 px to `build/previews/`. It uses the current qml4j compiler, layout engine, input dispatcher, and Skia renderer.
 
-See [visual alignment notes](docs/visual-alignment.md) for source references and remaining differences. Previews: [dark showcase](docs/preview-dark.png), [phone dialog](docs/dialog-phone-light.png), [desktop dialog](docs/dialog-desktop-dark.png), [dropdown](docs/dropdown-phone-light.png), [inputs light](docs/inputs-light.png), [inputs dark](docs/inputs-dark.png).
+See [visual alignment notes](docs/visual-alignment.md) for source references and remaining differences. Previews: [Monet light](docs/complete-light.png), [Monet dark](docs/complete-dark.png), [Monet phone](docs/complete-phone-dark.png), [dark showcase](docs/preview-dark.png), [phone dialog](docs/dialog-phone-light.png), [desktop dialog](docs/dialog-desktop-dark.png), [dropdown](docs/dropdown-phone-light.png), [inputs light](docs/inputs-light.png), [inputs dark](docs/inputs-dark.png), [phone navigation](docs/navigation-light.png), [desktop navigation](docs/navigation-dark.png), [expanded rail](docs/rail-light.png), [collapsed rail](docs/rail-dark.png).
 
 ## License
 

@@ -11,6 +11,9 @@ Item {
     property color containerColor: Theme.color.primary
     property color contentColor: Theme.color.onPrimary
     signal clicked()
+    activeFocusOnTab: true
+    Keys.onReturnPressed: { if (enabled) clicked(); event.accepted = true }
+    Keys.onSpacePressed: { if (enabled) clicked(); event.accepted = true }
 
     property int fabSize: {
         switch (type) {
@@ -22,6 +25,7 @@ Item {
     property int fabRadius: fabSize / 2
     property int iconSize: type === "large" ? 32 : 24
     property int elevationLevel: 4
+    opacity: enabled ? 1 : 0.38
 
     implicitWidth: type === "extended" ? (rowLayout.implicitWidth + 32) : fabSize
     implicitHeight: fabSize
@@ -51,29 +55,27 @@ Item {
         radius: root.fabRadius
         color: root.containerColor
 
-        Rectangle {
-            anchors.fill: parent
-            radius: parent.radius
-            color: "#000000"
-            opacity: mouseArea.pressed ? 0.10 : 0
-        }
+
     }
 
-    MouseArea {
+    Ripple {
         id: mouseArea
         anchors.fill: parent
-        onClicked: root.clicked()
+        clipRadius: root.fabRadius
+        rippleColor: root.contentColor
+        enabled: root.enabled
+        onClicked: { root.forceActiveFocus(); root.clicked() }
     }
 
     RowLayout {
         id: rowLayout
         anchors.centerIn: parent
         spacing: 8
-        Text {
+        Icon {
             visible: root.icon !== ""
-            text: root.icon
-            font.family: Theme.iconFont.name
-            font.pixelSize: root.iconSize
+            name: root.icon
+            width: root.iconSize
+            height: root.iconSize
             color: root.contentColor
         }
         Text {

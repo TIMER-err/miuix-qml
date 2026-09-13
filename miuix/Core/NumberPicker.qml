@@ -1,19 +1,7 @@
 import QtQuick
 import miuix.Core
 
-// Ports miuix basic/NumberPicker.kt: a vertical wheel whose items fade out away
-// from the centre.
-//
-// Only `visibleItemCount + 2` slots exist regardless of the range, and the whole
-// strip is moved by a single binding: the slots sit at fixed offsets inside it and
-// only change their label when the wheel crosses an item. Profiling a drag showed
-// ~55 JS binding evaluations per pointer move when every slot bound its own
-// position and opacity to the live offset, which is what made the wheel stutter.
-//
-// qml4j divergence: upstream fades and scales each item against the live drag
-// offset. Here the fade is fixed per slot -- the slots keep their row inside the
-// moving strip, so it costs nothing per move and still tracks the wheel within half
-// an item. There is no per-item scaling, and the wheel snaps on release.
+// Keep a bounded strip: range size never changes the number of live delegates.
 Item {
     id: numberPickerRoot
 
@@ -25,12 +13,43 @@ Item {
     property int visibleItemCount: 5
     property real itemHeight: 45
     property var label: null
-    property color selectedTextColor: Theme.color.onSurfaceColor
+    property color selectedTextColor: enabled ? Theme.color.onSurfaceColor : Theme.color.disabledOnSecondary
+    property color unselectedTextColor: enabled ? Theme.color.onSurfaceSecondary : Theme.color.disabledOnSecondary
+    property bool _settling: false
+    property bool _updatingValue: false
+    property bool _initialized: false
+    activeFocusOnTab: true
+    Keys.onUpPressed: { step(-1); event.accepted = true }
+    Keys.onDownPressed: { step(1); event.accepted = true }
+    function step(delta) {
+        if (!enabled) return
+        snap.stop()
+        _settling = false
+        value = from + _wrapIndex(value - from + delta)
+        _contentOffset = (value - from) * itemHeight
+    }
+    function normalize() {
+        if (!_initialized || _dragging || _settling) return
+        var next = Math.max(from, Math.min(Math.max(from, to), value))
+        if (next !== value) value = next
+        _contentOffset = (next - from) * itemHeight
+    }
+    function resetRange() {
+        snap.stop(); _settling = false; _dragging = false; _velocity = 0
+        normalize()
+    }
+    onFromChanged: resetRange()
+    onToChanged: resetRange()
+    onItemHeightChanged: resetRange()
+
 
     // Scroll offset in pixels, measured from the first item in the range.
-    property real _contentOffset: 0
+    property real _contentOffset: (value - from) * itemHeight
     property real _dragStartOffset: 0
     property real _pressY: 0
+    property real _sampleY: 0
+    property real _sampleTime: 0
+    property real _velocity: 0
     property bool _dragging: false
 
     // Item index at the centre. Changes only when the wheel crosses an item, so the
@@ -62,25 +81,37 @@ Item {
     }
 
     function _settle() {
-        var index = Math.round(_contentOffset / itemHeight)
+        var velocity = Date.now() - _sampleTime < 100 ? _velocity : 0
+        var travel = velocity * Math.abs(velocity) / 12000
+        var index = Math.round((_contentOffset + travel) / itemHeight)
         if (!wrapAround) index = Math.max(0, Math.min(_itemCount() - 1, index))
-        _contentOffset = index * itemHeight
+        _settling = true
+        snap.duration = Math.max(180, Math.min(600, Math.abs(velocity) / 6))
+        snap.to = index * itemHeight
+        snap.restart()
         var next = from + _wrapIndex(index)
+        _updatingValue = true
         if (next !== value) value = next
+        _updatingValue = false
     }
 
     onValueChanged: {
-        if (_dragging) return
-        var index = Math.max(from, Math.min(to, value)) - from
-        if (Math.round(_contentOffset / itemHeight) !== index) {
-            _contentOffset = index * itemHeight
-        }
+        if (!_updatingValue) { snap.stop(); _settling = false; _dragging = false; _velocity = 0; normalize() }
+    }
+    Component.onCompleted: initialValue.restart()
+    Timer {
+        id: initialValue
+        interval: 1
+        onTriggered: { numberPickerRoot._initialized = true; numberPickerRoot.normalize() }
+    }
+    NumberAnimation {
+        id: snap
+        target: numberPickerRoot; property: "_contentOffset"
+        duration: 180; easing.type: Easing.OutCubic
+        onFinished: numberPickerRoot._settling = false
     }
 
-    Component.onCompleted: _contentOffset = (Math.max(from, Math.min(to, value)) - from) * itemHeight
-
-    // The single binding that moves during a drag: the strip slides by the
-    // sub-item remainder, and the labels re-map when _rounded ticks over.
+    // Only the bounded visible strip participates in a drag.
     Item {
         id: strip
         width: numberPickerRoot.width
@@ -89,10 +120,15 @@ Item {
             - (numberPickerRoot._contentOffset - numberPickerRoot._rounded * numberPickerRoot.itemHeight)
 
         Repeater {
+            id: slots
             model: numberPickerRoot.visibleItemCount + 2
 
             delegate: Item {
                 id: slot
+                objectName: "miuixNumberSlot" + index
+                property real distance: Math.min(1, Math.abs(slotOffset - (numberPickerRoot._contentOffset / numberPickerRoot.itemHeight - numberPickerRoot._rounded)) / (numberPickerRoot._half + 0.5))
+                opacity: (1 - distance) * (1 - distance * 0.5)
+                scale: 1 - 0.2 * distance
                 property int slotOffset: index - (numberPickerRoot._half + 1)
                 width: numberPickerRoot.width
                 height: numberPickerRoot.itemHeight
@@ -105,16 +141,16 @@ Item {
                     text: numberPickerRoot._textFor(numberPickerRoot.from
                         + numberPickerRoot._wrapIndex(numberPickerRoot._rounded + slot.slotOffset))
                     horizontalAlignment: Text.AlignHCenter
+                    elide: Text.ElideRight
                     font.family: Theme.typography.titleMedium.family
-                    font.pixelSize: Theme.typography.titleMedium.size
-                    font.weight: slot.slotOffset === 0 ? Font.Bold : Font.Normal
-                    color: numberPickerRoot.selectedTextColor
-                    // Static: slotOffset never changes, so the fade costs nothing
-                    // while the wheel spins.
-                    opacity: {
-                        var d = Math.abs(slot.slotOffset) / (numberPickerRoot._half + 0.5)
-                        return (1 - d) * (1 - d * 0.5)
-                    }
+                    font.pixelSize: 32
+                    font.weight: Font.DemiBold
+                    color: Qt.rgba(
+                        numberPickerRoot.selectedTextColor.r * (1 - slot.distance) + numberPickerRoot.unselectedTextColor.r * slot.distance,
+                        numberPickerRoot.selectedTextColor.g * (1 - slot.distance) + numberPickerRoot.unselectedTextColor.g * slot.distance,
+                        numberPickerRoot.selectedTextColor.b * (1 - slot.distance) + numberPickerRoot.unselectedTextColor.b * slot.distance,
+                        numberPickerRoot.selectedTextColor.a * (1 - slot.distance) + numberPickerRoot.unselectedTextColor.a * slot.distance)
+
                 }
             }
         }
@@ -125,14 +161,29 @@ Item {
     MouseArea {
         anchors.fill: parent
         preventStealing: true
+        enabled: numberPickerRoot.enabled
 
         onPressed: (mouse) => {
+            snap.stop()
+            numberPickerRoot._settling = false
+            numberPickerRoot.forceActiveFocus()
             numberPickerRoot._dragging = true
             numberPickerRoot._dragStartOffset = numberPickerRoot._contentOffset
             numberPickerRoot._pressY = mouse.y
+            numberPickerRoot._sampleY = mouse.y
+            numberPickerRoot._sampleTime = Date.now()
+            numberPickerRoot._velocity = 0
         }
         onPositionChanged: (mouse) => {
-            if (!pressed) return
+            if (!pressed || !numberPickerRoot._dragging) return
+            var now = Date.now()
+            var elapsed = now - numberPickerRoot._sampleTime
+            if (elapsed > 0) {
+                numberPickerRoot._velocity = Math.max(-3000, Math.min(3000,
+                    (numberPickerRoot._sampleY - mouse.y) * 1000 / elapsed))
+                numberPickerRoot._sampleTime = now
+                numberPickerRoot._sampleY = mouse.y
+            }
             var next = numberPickerRoot._dragStartOffset - (mouse.y - numberPickerRoot._pressY)
             if (!numberPickerRoot.wrapAround) {
                 var maxOffset = (numberPickerRoot._itemCount() - 1) * numberPickerRoot.itemHeight
@@ -145,6 +196,7 @@ Item {
             numberPickerRoot._settle()
         }
         onCanceled: {
+            numberPickerRoot._velocity = 0
             numberPickerRoot._dragging = false
             numberPickerRoot._settle()
         }

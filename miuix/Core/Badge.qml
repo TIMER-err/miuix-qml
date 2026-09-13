@@ -6,26 +6,32 @@ Item {
 
     property string text: ""
     property color containerColor: Theme.color.error
-    property color contentColor: Theme.color.onError
+    property color contentColor: Theme.color.onErrorColor
     default property alias content: contentContainer.data
 
     readonly property bool _hasContent: text.length > 0 || contentContainer.children.length > 0
     readonly property real _contentWidth: text.length > 0
         ? badgeText.implicitWidth
         : Math.max(0, contentContainer.childrenRect.width)
+    readonly property real _contentHeight: text.length > 0
+        ? badgeText.implicitHeight
+        : Math.max(0, contentContainer.childrenRect.height)
 
     implicitWidth: _hasContent ? Math.max(16, _contentWidth + 8) : 6
-    implicitHeight: _hasContent ? 16 : 6
+    implicitHeight: _hasContent ? Math.max(16, _contentHeight) : 6
 
     Rectangle {
         anchors.fill: parent
-        radius: width / 2
+        radius: Math.min(width, height) / 2
         color: badgeRoot.containerColor
     }
 
     Item {
         id: contentContainer
-        anchors.fill: parent
+        x: (badgeRoot.width - badgeRoot._contentWidth) / 2
+        y: (badgeRoot.height - badgeRoot._contentHeight) / 2
+        width: badgeRoot._contentWidth
+        height: badgeRoot._contentHeight
         visible: badgeRoot._hasContent
     }
 
@@ -34,9 +40,7 @@ Item {
         anchors.centerIn: parent
         visible: badgeRoot.text.length > 0
         text: badgeRoot.text
-        font.family: Theme.typography.labelSmall.family
-        font.pixelSize: Theme.typography.labelSmall.size
-        font.weight: Theme.typography.labelSmall.weight
+        font.pixelSize: 11
         color: badgeRoot.contentColor
     }
 }

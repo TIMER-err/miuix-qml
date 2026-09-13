@@ -7,12 +7,12 @@ Item {
     
     // API
     property var model: [] // Array of objects: { text, icon, trailingText, trailingIcon, type: "item"|"separator", action: func, enabled: bool, subItems: [] }
-    property int menuPadding: 8
+    property int menuPadding: 12
     // Cap the popup width so a long item label (e.g. a playlist name in a submenu)
     // can't stretch the menu nearly across the screen; the item text elides instead.
-    property real maxWidth: 280
+    property real maxWidth: 288
     // Cap the popup height; a longer list (many playlists) scrolls inside.
-    property real maxHeight: 360
+    property real maxHeight: 420
     // A submenu belongs to its parent popup and therefore must not evict it from
     // the scene-wide active-menu slot.
     property var ownerMenu: null
@@ -49,6 +49,28 @@ Item {
 
     // Signals
     signal closed()
+    property int currentIndex: -1
+    readonly property bool opened: overlayLayer.visible
+    function moveSelection(step) {
+        var index = currentIndex
+        for (var i = 0; i < model.length; i++) {
+            index = (index + step + model.length) % model.length
+            if (model[index].type !== "separator" && model[index].enabled !== false) {
+                currentIndex = index
+                var entry = entries.itemAt(index)
+                if (entry && entry.item) {
+                    var top = entry.y
+                    menuFlick.contentY = Math.max(0, Math.min(top, top + entry.height - menuFlick.height))
+                }
+                return
+            }
+        }
+    }
+    function activateSelection() {
+        var entry = entries.itemAt(currentIndex)
+        if (entry && entry.item) entry.item.activate()
+    }
+
 
     // Hidden by default, takes no space
     visible: false
@@ -59,6 +81,10 @@ Item {
     Item {
         id: overlayLayer
         visible: false
+        Keys.onEscapePressed: { control.close(); event.accepted = true }
+        Keys.onDownPressed: { control.moveSelection(1); event.accepted = true }
+        Keys.onUpPressed: { control.moveSelection(-1); event.accepted = true }
+        Keys.onReturnPressed: { control.activateSelection(); event.accepted = true }
         
         // Helper to close menu
         function close() { 
@@ -83,8 +109,8 @@ Item {
         // Popup Container (This scales up/down, carrying shadow and content)
         Item {
             id: popupContainer
-            width: Math.min(control.maxWidth, Math.max(112, contentColumn.implicitWidth))
-            height: Math.min(control.maxHeight, contentColumn.implicitHeight + (control.menuPadding * 2))
+            width: Math.max(0, Math.min(control.maxWidth, control.menuRoot ? control.menuRoot.width - 16 : control.maxWidth))
+            height: Math.max(0, Math.min(control.maxHeight, control.menuRoot ? control.menuRoot.height - 16 : control.maxHeight, contentColumn.implicitHeight + (control.menuPadding * 2)))
             // Reactive on-screen clamp (see control.targetX/Y): recomputes whenever the
             // popup's own width/height settle, so a menu opened before layout finished
             // slides fully into view instead of overflowing.
@@ -95,23 +121,21 @@ Item {
                ? Math.max(8, Math.min(control.targetY, control.menuRoot.height - height - 8))
                : control.targetY
             
-            // Animation. Explicit from/to ParallelAnimations (like Dialog) instead of a
-            // state toggle: setting state="closed" then "open" in one call could collapse
-            // to just "open" (no from-closed transition) and pop in with no animation.
+            // Continue from current values when an open interrupts a pending close.
             scale: 0.8
             opacity: 0
             transformOrigin: Item.TopLeft
 
             ParallelAnimation {
                 id: enterAnim
-                NumberAnimation { target: popupContainer; property: "scale"; from: 0.8; to: 1.0; duration: 200; easing.type: Easing.OutCubic }
-                NumberAnimation { target: popupContainer; property: "opacity"; from: 0.0; to: 1.0; duration: 150 }
+                NumberAnimation { target: popupContainer; property: "scale"; to: 1.0; duration: 200; easing.type: Easing.OutCubic }
+                NumberAnimation { target: popupContainer; property: "opacity"; to: 1.0; duration: 150 }
             }
             ParallelAnimation {
                 id: exitAnim
                 onFinished: control._finishClose()
-                NumberAnimation { target: popupContainer; property: "opacity"; from: 1.0; to: 0.0; duration: 150 }
-                NumberAnimation { target: popupContainer; property: "scale"; from: 1.0; to: 0.8; duration: 150; easing.type: Easing.InCubic }
+                NumberAnimation { target: popupContainer; property: "opacity"; to: 0.0; duration: 150 }
+                NumberAnimation { target: popupContainer; property: "scale"; to: 0.8; duration: 150; easing.type: Easing.InCubic }
             }
 
             // Shadow Source
@@ -142,7 +166,7 @@ Item {
                 z: 1
                 anchors.fill: parent
                 color: control.outlined ? _colors.surfaceContainerLow : _colors.surfaceContainer
-                radius: control.outlined ? _shape.cornerSmall : _shape.cornerExtraSmall
+                radius: control.outlined ? 12 : 16
                 clip: true
                 
                 Flickable {
@@ -160,12 +184,14 @@ Item {
                         width: menuFlick.width
 
                         Repeater {
+                            id: entries
                             model: control.model
                             delegate: Loader {
                                 Layout.fillWidth: true
                                 sourceComponent: modelData.type === "separator" ? separatorComponent : itemComponent
 
                                 property var itemData: modelData
+                                property int itemIndex: index
 
                                 required property var modelData
                                 required property int index
@@ -228,6 +254,7 @@ Item {
     }
 
     function startExitAnimation() {
+        if (!overlayLayer.visible || exitAnim.running) return
         enterAnim.stop()
         exitAnim.restart()
     }
@@ -253,7 +280,8 @@ Item {
         Item {
             id: menuItem
             implicitWidth: Math.max(112, row.implicitWidth + 24)
-            implicitHeight: 48
+            implicitHeight: 56
+            objectName: "miuixMenuItem" + parent.itemIndex
             Layout.fillWidth: true
             
             property bool itemEnabled: itemData.enabled !== undefined ? itemData.enabled : true
@@ -266,7 +294,7 @@ Item {
             Loader {
                 id: subMenuLoader
                 active: hasSubMenu
-                source: "md3/Core/Menu.qml"
+                source: "miuix/Core/Menu.qml"
                 onLoaded: {
                     item.model = itemData.subItems
                     item.ownerMenu = control
@@ -279,8 +307,7 @@ Item {
                 color: _colors.onSurfaceColor
                 opacity: {
                     if (!itemEnabled) return 0
-                    if (itemRipple.pressed) return _state.pressedStateLayerOpacity
-                    if (itemRipple.containsMouse) return _state.hoverStateLayerOpacity
+                    if (control.currentIndex === menuItem.parent.itemIndex) return 0.08
                     return 0
                 }
                 Behavior on opacity { NumberAnimation { duration: 150 } }
@@ -294,22 +321,20 @@ Item {
                 anchors.fill: parent
                 enabled: itemEnabled
                 rippleColor: _colors.onSurfaceColor
-                onClicked: {
-                    if (hasSubMenu) {
-                        // Open submenu
-                        var sub = subMenuLoader.item
-                        if (sub) {
-                             sub.open(menuItem, menuItem.width, -8) // Slight overlap top
-                        }
-                    } else {
-                        if (itemData.action && typeof itemData.action === "function") {
-                            itemData.action()
-                        }
-                        if (control && control.close) control.close()
-                    }
+                onClicked: menuItem.activate()
+            }
+            function activate() {
+                if (!itemEnabled) return
+                if (hasSubMenu) {
+                    if (subMenuLoader.item) subMenuLoader.item.open(menuItem, menuItem.width, -12)
+                } else {
+                    if (typeof itemData.action === "function") itemData.action()
+                    var menu = control
+                    while (menu.ownerMenu) menu = menu.ownerMenu
+                    menu.close()
                 }
             }
-            
+
             RowLayout {
                 id: row
                 anchors.fill: parent
@@ -332,8 +357,8 @@ Item {
                 Text {
                     text: itemData.text || ""
                     font.family: _typography.labelLarge.family
-                    font.pixelSize: _typography.labelLarge.size
-                    font.weight: _typography.labelLarge.weight
+                    font.pixelSize: 16
+                    font.weight: Font.Normal
                     color: _colors.onSurfaceColor
                     opacity: itemEnabled ? 1 : 0.38
                     elide: Text.ElideRight
@@ -347,8 +372,8 @@ Item {
                     visible: !!itemData.trailingText
                     text: itemData.trailingText || ""
                     font.family: _typography.labelLarge.family
-                    font.pixelSize: _typography.labelLarge.size
-                    font.weight: _typography.labelLarge.weight
+                    font.pixelSize: 16
+                    font.weight: Font.Normal
                     color: _colors.onSurfaceColor
                     opacity: itemEnabled ? 1 : 0.38
                     horizontalAlignment: Text.AlignRight
@@ -391,10 +416,7 @@ Item {
                 }
                 control.ownerMenu.activeSubMenu = control
             } else {
-                if (root.activeMenu && root.activeMenu !== control) {
-                    root.activeMenu.dismissImmediately()
-                }
-                root.activeMenu = control
+                PopupRegistry.claim(root, control)
             }
 
             overlayLayer.parent = root
@@ -414,6 +436,8 @@ Item {
             control._anchorYOffset = yOffset !== undefined ? yOffset : 0
 
             overlayLayer.visible = true
+            overlayLayer.forceActiveFocus()
+            control.currentIndex = -1
             startEntranceAnimation()
         }
     }
@@ -429,18 +453,18 @@ Item {
     }
 
     function _finishClose() {
+        if (!overlayLayer.visible) return
         if (control.activeSubMenu) {
             control.activeSubMenu.dismissImmediately()
             control.activeSubMenu = null
         }
+        if (control._anchorItem) control._anchorItem.forceActiveFocus()
         control._anchorItem = null
         overlayLayer.forceClose()
         if (control.ownerMenu) {
             if (control.ownerMenu.activeSubMenu === control)
                 control.ownerMenu.activeSubMenu = null
-        } else if (control.menuRoot && control.menuRoot.activeMenu === control) {
-            control.menuRoot.activeMenu = null
-        }
+        } else PopupRegistry.release(control)
         control.closed()
     }
 }

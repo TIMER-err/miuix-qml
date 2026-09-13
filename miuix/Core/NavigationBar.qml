@@ -1,126 +1,118 @@
 import QtQuick
 import QtQuick.Layouts
 import miuix.Core
+
 Item {
-    id: root
-    
-    // Properties
-    property var model: [] // Array of {icon: "name", text: "label"}
-    default property alias content: stackLayout.data
+    id: navigationRoot
+    // Entries: { icon, text, enabled, badge }. Content children follow the same order.
+    property var model: []
+    default property alias content: pages.data
     property int currentIndex: 0
-    
+    property bool selectOnClick: true
+    property string mode: "iconAndText"
+    property bool showDivider: true
+    property real bottomInset: 0
+    property color backgroundColor: Theme.color.surface
+    property color contentColor: Theme.color.onSurfaceContainer
+    property color selectedContentColor: Theme.color.onSurfaceContainer
+    readonly property real barHeight: model.length > 0 ? 64 + (showDivider ? 1 : 0) + Math.max(0, bottomInset) : 0
+    signal activated(int index)
+
     implicitWidth: 640
     implicitHeight: 480
-    
-    // Content Area
+
+    function select(index) {
+        if (!enabled || index < 0 || index >= model.length || model[index].enabled === false) return
+        if (selectOnClick) currentIndex = index
+        activated(index)
+    }
+
     StackLayout {
-        id: stackLayout
+        id: pages
+        objectName: "miuixNavigationPages"
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.bottom: navBar.top
-        currentIndex: root.currentIndex
+        anchors.bottom: bar.top
+        currentIndex: navigationRoot.currentIndex
         clip: true
     }
-    
-    // Navigation Bar
     Rectangle {
-        id: navBar
+        id: bar
+        objectName: "miuixNavigationBar"
         anchors.bottom: parent.bottom
-        anchors.left: parent.left
-        anchors.right: parent.right
-        height: 80
-        color: Theme.color.surfaceContainer
-        
-        RowLayout {
-            anchors.fill: parent
-            spacing: 8
-            anchors.margins: 12
-            
+        width: parent.width
+        height: navigationRoot.barHeight
+        visible: navigationRoot.model.length > 0
+        color: navigationRoot.backgroundColor
+        MouseArea { anchors.fill: parent }
+        Divider { width: parent.width; visible: navigationRoot.showDivider }
+        Row {
+            y: navigationRoot.showDivider ? 1 : 0
+            width: parent.width
+            height: 64
             Repeater {
-                model: root.model
-                
-                Item {
+                model: navigationRoot.model
+                delegate: Item {
                     id: navItem
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    
-                    property bool selected: index === root.currentIndex
+                    objectName: "miuixNavigationItem" + index
+                    width: navigationRoot.model.length > 0 ? bar.width / navigationRoot.model.length : 0
+                    height: 64
+                    property bool selected: index === navigationRoot.currentIndex
                     property var itemData: modelData
-                    
-                    // MouseArea for the whole item to trigger click (e.g. label), 
-                    // but visual ripple is only on pill (handled by inner Ripple)
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: root.currentIndex = index
-                        z: -1 // Ensure it's behind the content
+                    property bool available: navigationRoot.enabled && modelData.enabled !== false
+                    property real stateOpacity: !available ? 0.2 : pointer.pressed ? (selected ? 0.5 : 0.6) : selected ? 1 : 0.4
+                    property color tint: selected ? navigationRoot.selectedContentColor : navigationRoot.contentColor
+                    property bool hasLabel: navigationRoot.mode === "iconAndText"
+                        || (navigationRoot.mode === "iconWithSelectedLabel" && selected)
+                    BadgedBox {
+                        id: navIcon
+                        objectName: "miuixNavigationIcon" + index
+                        x: (parent.width - width) / 2
+                        y: navItem.hasLabel ? 8 : 19
+                        width: 26
+                        height: 26
+                        badgeBounds: ({x: -x, y: -y, width: navItem.width, height: navItem.height})
+                        badge: modelData.badge !== undefined && modelData.badge !== null ? badgeContent : null
+                        Icon {
+                            width: 26
+                            height: 26
+                            name: modelData.icon || ""
+                            color: navItem.tint
+                            opacity: navItem.stateOpacity
+                        }
+                        Component {
+                            id: badgeContent
+                            Badge {
+                                objectName: "miuixNavigationBadge" + navItem.index
+                                text: String(navItem.itemData.badge)
+                            }
+                        }
+                        Behavior on y { NumberAnimation { duration: 300; easing.type: Easing.OutCubic } }
                     }
-                    
-                    ColumnLayout {
-                        anchors.centerIn: parent
-                        spacing: 4
-                        
-                        // Icon Pill
-                        Item {
-                            id: iconPill
-                            Layout.alignment: Qt.AlignHCenter
-                            width: 64
-                            height: 32
-                            
-                            Rectangle {
-                                id: indicatorBg
-                                anchors.centerIn: parent
-                                height: parent.height
-                                radius: 16
-                                color: navItem.selected ? Theme.color.secondaryContainer : "transparent"
-                                
-                                // State-driven width for asymmetric animation (animate in, snap out)
-                                width: 0
-                                
-                                states: State {
-                                    name: "selected"
-                                    when: navItem.selected
-                                    PropertyChanges { target: indicatorBg; width: 64 }
-                                }
-                                
-                                transitions: Transition {
-                                    from: ""
-                                    to: "selected"
-                                    NumberAnimation { property: "width"; duration: 150; easing.type: Easing.OutQuad }
-                                }
-                            }
-
-                            // qml4j divergence: upstream only comments about a ripple
-                            // but never adds one; give the pill its MD3 state layer.
-                            Ripple {
-                                anchors.fill: parent
-                                clipRadius: 16
-                                rippleColor: navItem.selected ? Theme.color.onSecondaryContainerColor : Theme.color.onSurfaceVariantColor
-                                onClicked: root.currentIndex = index
-                            }
-
-                            Text {
-                                anchors.centerIn: parent
-                                text: itemData.icon || ""
-                                font.family: Theme.iconFont.name
-                                font.pixelSize: 24
-                                color: navItem.selected ? Theme.color.onSecondaryContainerColor : Theme.color.onSurfaceVariantColor
-                            }
-                        }
-                        
-                        // Label
-                        Text {
-                            Layout.alignment: Qt.AlignHCenter
-                            text: itemData.text || ""
-                            font.family: Theme.typography.labelMedium.family
-                            font.pixelSize: Theme.typography.labelMedium.size
-                            font.weight: navItem.selected ? Font.Bold : Font.Normal
-                            color: navItem.selected ? Theme.color.onSurfaceColor : Theme.color.onSurfaceVariantColor
-                        }
+                    Text {
+                        objectName: "miuixNavigationLabel" + index
+                        x: 4
+                        y: 34
+                        width: Math.max(0, parent.width - 8)
+                        text: modelData.text || ""
+                        font.pixelSize: 12
+                        font.weight: navItem.selected ? Font.Bold : Font.Normal
+                        horizontalAlignment: Text.AlignHCenter
+                        elide: Text.ElideRight
+                        maximumLineCount: 1
+                        color: navItem.tint
+                        opacity: navItem.hasLabel ? navItem.stateOpacity : 0
+                        Behavior on opacity { NumberAnimation { duration: 300; easing.type: Easing.OutCubic } }
+                    }
+                    MouseArea {
+                        id: pointer
+                        anchors.fill: parent
+                        enabled: navItem.available
+                        onClicked: navigationRoot.select(index)
                     }
                 }
             }
         }
     }
 }
-
