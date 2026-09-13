@@ -86,10 +86,10 @@ Preference rows wrap their text and compute their height from content plus 16 px
 | `NavigationBar` | 64 px items with 26 px icons and 12 px labels, three display modes, optional divider/inset, controlled selection and disabled entries |
 | `NavigationRail` | Synchronized 80/240 px expansion, 28 px icons, 12/16 px labels, scrollable menu, fixed footer and configurable content slots |
 | `Badge`, `BadgedBox` | 6 px dots, 16 px minimum number badges, 11 px white labels, measured custom content and optional top/end bounds |
-| `TabRow`, `TabRowWithContour` | Continuous corners and outlines, automatic selection reveal, horizontal scrolling, empty/disabled states |
+| `TabRow`, `TabRowWithContour` | Centered fitting tabs with content-sized backgrounds, automatic selection reveal, horizontal scrolling, empty/disabled states |
 | `Theme` | Mutable `dark`, shared `metrics`, dedicated disabled button/switch/slider colors |
 
-The overlay showcase demonstrates confirmation and long-content dialogs, plus a dropdown with summaries and disabled entries. `Dialog` accepts `maxWidth`, `cornerRadius`, `padding`, `outsideMargin`, `topInset`, `bottomInset`, and a `largeScreen` override. By default it centers when the window is at least 840 × 480; otherwise it slides up from the bottom. Two actions stack when their labels cannot fit side by side. Repeated `open()` / `close()` calls are guarded, and reopening cancels a pending close.
+The overlay showcase demonstrates confirmation and long-content dialogs, plus a dropdown with summaries and disabled entries. `Dialog` accepts `maxWidth`, `cornerRadius`, `padding`, `outsideMargin`, `topInset`, `bottomInset`, `resizeDuration`, and a `largeScreen` override. By default it centers when the window is at least 840 × 480; otherwise it slides up from the bottom. Two actions stack when their labels cannot fit side by side. Repeated `open()` / `close()` calls are guarded, and reopening cancels a pending close. Once open, content height changes animate over `resizeDuration` (240 ms by default); width changes apply immediately.
 
 Dropdown entries may be strings or `{ text, summary, enabled }` objects. `popupWidth` defaults to 288 and `popupMaxHeight` to 420; both are capped to the visible window. Long lists scroll, selected entries are revealed on opening, and the popup follows its anchor during resize.
 

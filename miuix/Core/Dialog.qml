@@ -30,6 +30,7 @@ Item {
     property real cornerRadius: 32
     property real topInset: 0
     property real bottomInset: 0
+    property int resizeDuration: 240
     property bool largeScreen: overlayLayer.width >= 840 && overlayLayer.height >= 480
     readonly property bool opened: overlayLayer.visible
     readonly property bool compactActionLayout: actionRow.stacked
@@ -112,6 +113,10 @@ Item {
             width: Math.max(0, Math.min(dialogRoot.maxWidth, overlayLayer.width - dialogRoot.outsideMargin * 2))
             height: Math.min(bodyColumn.height + actions.height + dialogRoot.padding * 2 + (actions.height > 0 ? 12 : 0),
                 dialogRoot.largeScreen ? dialogRoot._availableHeight * 2 / 3 : dialogRoot._availableHeight)
+            Behavior on height {
+                enabled: overlayLayer.visible && dialogRoot._progress >= 1 && !dialogRoot._closing
+                NumberAnimation { duration: dialogRoot.resizeDuration; easing.type: Easing.OutCubic }
+            }
             x: (overlayLayer.width - width) / 2
             y: dialogRoot.largeScreen
                 ? dialogRoot.topInset + (dialogRoot._availableHeight - height) / 2 + dialogRoot.outsideMargin

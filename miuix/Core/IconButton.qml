@@ -50,6 +50,7 @@ Item {
         // MiuixIndication: a flat overlay in onBackground, +0.06 hovered / +0.10
         // pressed, clipped to the button's own shape.
         Rectangle {
+            objectName: "miuixIconButtonStateLayer"
             anchors.fill: parent
             radius: parent.radius
             color: _colors.onBackground
@@ -71,6 +72,9 @@ Item {
         anchors.fill: parent
         enabled: control.enabled
         hoverEnabled: true
-        onClicked: { control.forceActiveFocus(); control.clicked() }
+        // Pointer activation has hover/press feedback; reserve focus indication
+        // for keyboard navigation, including after a dialog restores focus.
+        onPressed: control.focus = false
+        onClicked: control.clicked()
     }
 }

@@ -161,11 +161,14 @@ Item {
                         Text {
                             id: label
                             objectName: "miuixRailLabel" + index
-                            width: Math.min(implicitWidth, railItem.labelLimit)
+                            // Allocate the available label slot, not the unshaped
+                            // natural width: glyph shaping can be slightly wider.
+                            width: railItem.labelLimit
                             x: (railItem.iconX + 14 - width / 2) * (1 - railRoot._progress) + 70 * railRoot._progress
                             y: (44 + (railRoot.expandable ? 8 : 0)) * (1 - railRoot._progress)
                                 + (railItem.height - height) / 2 * railRoot._progress
                             text: modelData.text || ""
+                            horizontalAlignment: railRoot._progress > 0.5 ? Text.AlignLeft : Text.AlignHCenter
                             font.pixelSize: 12 + 4 * railRoot._progress
                             font.weight: 57
                             color: Theme.color.onSurfaceContainer

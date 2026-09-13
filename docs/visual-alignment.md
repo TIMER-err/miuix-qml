@@ -97,3 +97,14 @@ This pass uses qml4j `c6f374caf17387b45c89d7a20f3a297dddd85843` without engine s
 A local drag-update microbenchmark (1,000 measured pointer moves after warmup, including binding/layout settling) measured the continuously styled wheel at approximately 0.33 ms median and 0.78 ms P95, versus 0.08/0.76 ms for the previous fixed-style strip. This measures update cost, not end-to-end frame latency, and is machine-specific.
 
 See [Monet light](complete-light.png), [Monet dark](complete-dark.png), and [phone dark](complete-phone-dark.png). Launch `./run.sh showcases/MiuixCompleteShowcase.qml` for live seed colors, theme switching, app-bar scrolling, menus and refresh.
+
+## QPlayer integration fixes
+
+The shared component fixes validated in QPlayer are also applied here:
+
+- Button and IconButton clear focus on pointer press and do not claim it on click, preventing a persistent focus overlay after the pointer leaves. Keyboard navigation and activation retain focus indication.
+- Dialog animates content-driven height changes only after opening finishes, using a configurable 240 ms duration. Width changes remain immediate.
+- NavigationRail labels occupy the available text slot; expanded labels align left and collapsed labels center, avoiding premature ellipsis after resizing or changing language.
+- TabRow centers fitting tabs, bounds the contour background to their content, and keeps overflowing tabs scrollable. Standard tabs use a transparent background by default.
+
+These changes use the existing qml4j engine without engine modifications.

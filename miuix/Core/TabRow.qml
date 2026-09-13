@@ -12,7 +12,7 @@ Item {
     property real maxWidth: contour ? 84 : 98
     property real itemSpacing: contour ? 5 : 9
     property real cornerRadius: contour ? 8 : 12
-    property color backgroundColor: Theme.color.surface
+    property color backgroundColor: contour ? Theme.color.surface : "transparent"
     property color contentColor: Theme.color.onSurfaceVariantSummary
     property color selectedBackgroundColor: Theme.color.surfaceContainer
     property color selectedContentColor: Theme.color.onBackground
@@ -30,6 +30,8 @@ Item {
     readonly property real _tabsWidth: equalWidth
         ? (tabs.length > 0 ? tabs.length * _tabWidth + (tabs.length - 1) * itemSpacing : 0)
         : tabsRow.implicitWidth
+    readonly property real _contentWidth: _tabsWidth + _contourPadding * 2
+    readonly property real _contentOffset: Math.max(0, (width - _contentWidth) / 2)
 
     implicitWidth: 320
     implicitHeight: contour ? 45 : 42
@@ -85,7 +87,10 @@ Item {
     Component.onCompleted: settleTimer.restart()
 
     SmoothRectangle {
-        anchors.fill: parent
+        objectName: "miuixTabBackground"
+        x: tabRowRoot._contentOffset
+        width: Math.min(tabRowRoot.width, tabRowRoot._contentWidth)
+        height: parent.height
         radius: tabRowRoot.contour ? tabRowRoot.cornerRadius + tabRowRoot._contourPadding : 0
         color: tabRowRoot.backgroundColor
     }
@@ -102,9 +107,9 @@ Item {
 
         Item {
             id: tabContent
-            x: 0
+            x: tabRowRoot._contentOffset
             y: tabRowRoot._contourPadding
-            width: viewport.contentWidth
+            width: tabRowRoot._contentWidth
             height: Math.max(0, viewport.height - tabRowRoot._contourPadding * 2)
 
             SmoothRectangle {

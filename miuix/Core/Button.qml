@@ -72,6 +72,7 @@ Item {
         borderColor: enabled ? _colors.outline : _colors.disabledSecondaryVariant
 
         SmoothRectangle {
+            objectName: "miuixButtonStateLayer"
             anchors.fill: parent
             radius: parent.radius
             color: _colors.onBackground
@@ -110,6 +111,7 @@ Item {
         anchors.fill: parent
         enabled: control.enabled
         hoverEnabled: true
-        onClicked: { control.forceActiveFocus(); control.clicked() }
+        onPressed: control.focus = false
+        onClicked: control.clicked()
     }
 }
