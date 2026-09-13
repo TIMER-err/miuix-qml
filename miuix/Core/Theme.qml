@@ -2,9 +2,17 @@ pragma Singleton
 import QtQuick
 
 QtObject {
-    property var color: StyleManager.isDarkTheme ? schemes.dark : schemes.light
+    property bool dark: StyleManager.isDarkTheme
+    property var color: dark ? schemes.dark : schemes.light
     property QtObject schemes: QtObject {
         property QtObject light: QtObject {
+            property color disabledSecondary: "#F0F0F0"
+            property color disabledOnSecondary: "#FCFCFC"
+            property color disabledPrimaryButton: "#C2D9FF"
+            property color disabledOnPrimaryButton: "#FFFFFF"
+            property color disabledPrimarySlider: "#B8CFF5"
+            property color sliderKeyPoint: "#4DA3B3CD"
+            property color sliderKeyPointForeground: "#6EB5FF"
             property color primary: "#3482FF"
             property color onPrimaryColor: "#ffffff"
             property color primaryContainer: "#5D9BFF"
@@ -59,6 +67,13 @@ QtObject {
             property color windowDimming: "#4D000000"
         }
         property QtObject dark: QtObject {
+            property color disabledSecondary: "#3F3F3F"
+            property color disabledOnSecondary: "#797979"
+            property color disabledPrimaryButton: "#253E64"
+            property color disabledOnPrimaryButton: "#677893"
+            property color disabledPrimarySlider: "#44587C"
+            property color sliderKeyPoint: "#4D7A8AA6"
+            property color sliderKeyPointForeground: "#5DAAFF"
             property color primary: "#277AF7"
             property color onPrimaryColor: "#ffffff"
             property color primaryContainer: "#338FE4"
@@ -112,6 +127,17 @@ QtObject {
             property color sliderBackground: "#26FFFFFF"
             property color windowDimming: "#99000000"
         }
+    }
+    property QtObject metrics: QtObject {
+        property real cardRadius: 16
+        property real buttonRadius: 16
+        property real rowMinHeight: 56
+        property real rowPadding: 16
+        property real titleSize: 17
+        property real summarySize: 14
+        property real switchWidth: 49
+        property real switchHeight: 28
+        property real sliderHeight: 28
     }
     property QtObject elevation: QtObject {
         property real level0: 0

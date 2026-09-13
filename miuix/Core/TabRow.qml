@@ -124,7 +124,7 @@ Item {
                             elide: Text.ElideRight
                             horizontalAlignment: Text.AlignHCenter
                             font.family: Theme.typography.bodyMedium.family
-                            font.pixelSize: Theme.typography.bodyMedium.size
+                            font.pixelSize: tabRowRoot.contour ? 14 : 16
                             font.weight: index === tabRowRoot.selectedTabIndex ? Font.Bold : Font.Normal
                             color: index === tabRowRoot.selectedTabIndex
                                 ? tabRowRoot.selectedContentColor : tabRowRoot.contentColor

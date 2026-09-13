@@ -9,6 +9,7 @@ Item {
     property bool enabled: true
     property real horizontalPadding: type === "text" ? 12 : 16
     property real verticalPadding: 13
+    property real cornerRadius: Theme.metrics.buttonRadius
     property real spacing: 8
     property bool hovered: enabled && pressArea.containsMouse
     property bool pressed: enabled && pressArea.pressed
@@ -19,7 +20,7 @@ Item {
     property var _colors: Theme.color
 
     implicitWidth: Math.max((contentItem ? contentItem.implicitWidth : contentRow.width) + horizontalPadding * 2, 58)
-    implicitHeight: 40
+    implicitHeight: Math.max(40, (contentItem ? contentItem.implicitHeight : contentRow.height) + verticalPadding * 2)
 
     onContentItemChanged: {
         if (contentItem) {
@@ -30,7 +31,8 @@ Item {
 
     property color containerColor: {
         if (!enabled) {
-            if (type === "filled" || type === "elevated") return _colors.disabledPrimary
+            if (type === "filled") return _colors.disabledPrimaryButton
+            if (type === "text" || type === "outlined") return "transparent"
             return _colors.disabledSecondaryVariant
         }
         switch (type) {
@@ -45,7 +47,7 @@ Item {
 
     property color contentColor: {
         if (!enabled) {
-            if (type === "filled" || type === "elevated") return _colors.disabledOnPrimary
+            if (type === "filled") return _colors.disabledOnPrimaryButton
             return _colors.disabledOnSecondaryVariant
         }
         switch (type) {
@@ -61,7 +63,7 @@ Item {
     Rectangle {
         id: backgroundRect
         anchors.fill: parent
-        radius: 16
+        radius: control.cornerRadius
         color: containerColor
         border.width: type === "outlined" ? 1 : 0
         border.color: enabled ? _colors.outline : _colors.disabledSecondaryVariant
@@ -69,7 +71,7 @@ Item {
         Rectangle {
             anchors.fill: parent
             radius: parent.radius
-            color: "#000000"
+            color: _colors.onBackground
             opacity: control.pressed ? 0.10 : (control.hovered ? 0.06 : 0)
         }
 

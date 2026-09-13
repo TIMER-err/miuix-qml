@@ -3,12 +3,14 @@ import QtQuick.Layouts
 import QtQuick.Effects
 import miuix.Core
 Item {
-    id: control
+    id: superDropdownRoot
     property string title: ""
     property string summary: ""
     property var items: []
     property int currentIndex: 0
     property bool enabled: true
+    property bool selectOnClick: true
+    readonly property bool menuOpen: overlayLayer.visible
     readonly property string currentValue: {
         if (currentIndex < 0 || currentIndex >= items.length) return ""
         var item = items[currentIndex]
@@ -17,9 +19,8 @@ Item {
     signal clicked()
     signal activated(int index)
 
-    anchors.left: parent.left
-    anchors.right: parent.right
-    height: 56
+    width: parent ? parent.width : 320
+    implicitHeight: preference.implicitHeight
 
     property int _count: items.length
     property real _panelWidth: 216
@@ -30,21 +31,23 @@ Item {
     }
 
     function select(index) {
-        control.currentIndex = index
-        control.activated(index)
+        if (!superDropdownRoot.enabled || index < 0 || index >= superDropdownRoot.items.length) return
+        if (superDropdownRoot.selectOnClick) superDropdownRoot.currentIndex = index
+        superDropdownRoot.activated(index)
         closeMenu()
     }
 
     function openMenu() {
-        var root = control
+        if (!superDropdownRoot.enabled || superDropdownRoot.items.length === 0) return
+        var root = superDropdownRoot
         while (root.parent) root = root.parent
         if (!root) return
         overlayLayer.parent = root
         overlayLayer.z = 99999
         overlayLayer.anchors.fill = root
-        var pos = root.mapFromItem(control, 0, 0)
-        var px = pos.x + control.width - _panelWidth
-        var py = pos.y + control.height
+        var pos = root.mapFromItem(superDropdownRoot, 0, 0)
+        var px = pos.x + superDropdownRoot.width - _panelWidth
+        var py = pos.y + superDropdownRoot.height
         if (px < 8) px = 8
         if (px + _panelWidth > root.width - 8) px = root.width - _panelWidth - 8
         if (py + _panelHeight > root.height - 8) py = pos.y - _panelHeight
@@ -64,63 +67,17 @@ Item {
         exitAnim.start()
     }
 
-    Rectangle {
+    SuperArrow {
+        id: preference
         anchors.fill: parent
-        color: "#000000"
-        opacity: pressArea.pressed ? 0.10 : (pressArea.containsMouse ? 0.06 : 0)
-        Behavior on opacity { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
-    }
-
-    MouseArea {
-        id: pressArea
-        anchors.fill: parent
-        enabled: control.enabled
-        hoverEnabled: true
+        title: superDropdownRoot.title
+        summary: superDropdownRoot.summary
+        rightText: superDropdownRoot.currentValue
+        indicator: "unfold_more"
+        enabled: superDropdownRoot.enabled
         onClicked: {
-            openMenu()
-            control.clicked()
-        }
-    }
-
-    RowLayout {
-        anchors.fill: parent
-        anchors.leftMargin: 16
-        anchors.rightMargin: 16
-        spacing: 8
-
-        Column {
-            Layout.fillWidth: true
-            Layout.alignment: Qt.AlignVCenter
-            spacing: 2
-            Text {
-                text: control.title
-                font.pixelSize: 17
-                font.weight: 57
-                color: control.enabled ? Theme.color.onBackground : Theme.color.disabledOnSecondaryVariant
-                width: parent.width
-            }
-            Text {
-                text: control.summary
-                visible: control.summary.length > 0
-                font.pixelSize: 14
-                color: Theme.color.onSurfaceVariantSummary
-                width: parent.width
-            }
-        }
-
-        Text {
-            Layout.alignment: Qt.AlignVCenter
-            text: control.currentValue
-            font.pixelSize: 14
-            color: Theme.color.onSurfaceVariantActions
-        }
-
-        Text {
-            Layout.alignment: Qt.AlignVCenter
-            text: "unfold_more"
-            font.family: Theme.iconFont.name
-            font.pixelSize: 16
-            color: Theme.color.onSurfaceVariantActions
+            superDropdownRoot.openMenu()
+            superDropdownRoot.clicked()
         }
     }
 
@@ -131,13 +88,13 @@ Item {
         MouseArea {
             anchors.fill: parent
             z: -1
-            onPressed: control.closeMenu()
+            onPressed: superDropdownRoot.closeMenu()
         }
 
         Item {
             id: popupContainer
-            width: control._panelWidth
-            height: control._panelHeight
+            width: superDropdownRoot._panelWidth
+            height: superDropdownRoot._panelHeight
             scale: 0.8
             opacity: 0
             transformOrigin: Item.TopRight
@@ -151,7 +108,7 @@ Item {
                 id: exitAnim
                 onFinished: {
                     overlayLayer.visible = false
-                    overlayLayer.parent = control
+                    overlayLayer.parent = superDropdownRoot
                 }
                 NumberAnimation { target: popupContainer; property: "opacity"; from: 1; to: 0; duration: 150 }
                 NumberAnimation { target: popupContainer; property: "scale"; from: 1; to: 0.8; duration: 150; easing.type: Easing.InCubic }
@@ -186,19 +143,19 @@ Item {
                     width: parent.width
                     y: 8
                     Repeater {
-                        model: control.items
+                        model: superDropdownRoot.items
                         delegate: Item {
                             width: list.width
                             height: 48
                             Text {
                                 anchors.verticalCenter: parent.verticalCenter
                                 x: 20
-                                text: control.itemText(modelData)
+                                text: superDropdownRoot.itemText(modelData)
                                 font.pixelSize: 17
-                                color: index === control.currentIndex ? Theme.color.primary : Theme.color.onSurfaceContainer
+                                color: index === superDropdownRoot.currentIndex ? Theme.color.primary : Theme.color.onSurfaceContainer
                             }
                             Text {
-                                visible: index === control.currentIndex
+                                visible: index === superDropdownRoot.currentIndex
                                 anchors.verticalCenter: parent.verticalCenter
                                 anchors.right: parent.right
                                 anchors.rightMargin: 20
@@ -209,7 +166,7 @@ Item {
                             }
                             MouseArea {
                                 anchors.fill: parent
-                                onClicked: control.select(index)
+                                onClicked: superDropdownRoot.select(index)
                             }
                         }
                     }

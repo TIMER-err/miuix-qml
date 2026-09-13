@@ -2,13 +2,13 @@ import QtQuick
 import QtQuick.Effects
 import miuix.Core
 Item {
-    id: root
+    id: cardRoot
 
     property string type: "filled"
-    property real radius: 16
+    property real radius: Theme.metrics.cardRadius
     property real padding: 0
     default property alias contentItem: contentContainer.data
-    property alias color: root.containerColor
+    property alias color: cardRoot.containerColor
     property bool hovered: false
     property bool pressed: false
     property color containerColor: Theme.color.surfaceContainer
@@ -30,22 +30,22 @@ Item {
     Rectangle {
         id: maskRect
         anchors.fill: parent
-        radius: root.radius
+        radius: cardRoot.radius
         color: "#000000"
         visible: false
     }
 
     Rectangle {
         anchors.fill: parent
-        radius: root.radius
-        color: root.containerColor
-        border.width: root.type === "outlined" ? 1 : 0
-        border.color: root.outlineColor
+        radius: cardRoot.radius
+        color: cardRoot.containerColor
+        border.width: cardRoot.type === "outlined" ? 1 : 0
+        border.color: cardRoot.outlineColor
     }
 
     Item {
         id: contentContainer
         anchors.fill: parent
-        anchors.margins: root.padding
+        anchors.margins: cardRoot.padding
     }
 }

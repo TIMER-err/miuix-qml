@@ -32,7 +32,7 @@ Item {
                 radius: height / 2
                 color: {
                     if (!control.enabled)
-                        return control.checked ? _colors.disabledPrimary : _colors.secondaryContainer
+                        return control.checked ? _colors.disabledPrimary : _colors.disabledSecondary
                     return control.checked ? _colors.primary : _colors.secondary
                 }
                 Behavior on color { ColorAnimation { duration: 180; easing.type: Easing.OutCubic } }
@@ -48,8 +48,16 @@ Item {
                 scale: hit.pressed && control.enabled ? 1.127 : 1
                 color: {
                     if (!control.enabled)
-                        return control.checked ? _colors.disabledOnPrimary : "#FCFCFC"
+                        return control.checked ? _colors.disabledOnPrimary : _colors.disabledOnSecondary
                     return "#ffffff"
+                }
+                Icon {
+                    anchors.centerIn: parent
+                    width: 12
+                    height: 12
+                    visible: control.showIcon && control.checked
+                    name: control.icon
+                    color: control.enabled ? _colors.primary : _colors.disabledPrimary
                 }
                 Behavior on x { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
                 Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }

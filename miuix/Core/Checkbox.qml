@@ -31,16 +31,16 @@ Item {
             radius: 13
             color: {
                 if (!control.enabled)
-                    return control._visualChecked ? _colors.disabledPrimary : _colors.secondaryContainer
+                    return control._visualChecked ? _colors.disabledPrimary : _colors.disabledSecondary
                 return control._visualChecked ? _colors.primary : _colors.secondary
             }
             Behavior on color { ColorAnimation { duration: 180; easing.type: Easing.OutCubic } }
 
-            Text {
+            Icon {
                 anchors.centerIn: parent
-                text: control.indeterminate ? "remove" : "check"
-                font.family: Theme.iconFont.name
-                font.pixelSize: 16
+                name: control.indeterminate ? "remove" : "check"
+                width: 16
+                height: 16
                 color: control.enabled ? _colors.onPrimary : _colors.disabledOnPrimary
                 opacity: control._visualChecked ? 1 : 0
                 Behavior on opacity { NumberAnimation { duration: 80 } }

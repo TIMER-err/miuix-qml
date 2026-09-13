@@ -64,7 +64,7 @@ Scaffold {
             Card {
                 x: 12
                 width: parent.width - 24
-                height: 112
+                height: wifiSwitch.height + btSwitch.height
                 SuperSwitch {
                     id: wifiSwitch
                     title: "Wi-Fi"
@@ -73,7 +73,7 @@ Scaffold {
                 }
                 SuperSwitch {
                     id: btSwitch
-                    y: 56
+                    y: wifiSwitch.height
                     title: "Bluetooth"
                     checked: false
                 }
@@ -123,30 +123,30 @@ Scaffold {
             Card {
                 x: 12
                 width: parent.width - 24
-                height: 280
+                height: darkRow.y + darkRow.height + 110
                 SuperArrow {
                     id: aboutRow
                     title: "About"
                     summary: "Version 0.9.3"
                 }
-                Divider { y: 56; width: parent.width - 32; x: 16 }
+                Divider { y: aboutRow.height; width: parent.width - 32; x: 16 }
                 SuperCheckbox {
                     id: rememberRow
-                    y: 57
+                    y: aboutRow.height + 1
                     title: "Remember me"
                     summary: "Keep signed in"
                     checked: true
                 }
-                Divider { y: 113; width: parent.width - 32; x: 16 }
+                Divider { y: rememberRow.y + rememberRow.height; width: parent.width - 32; x: 16 }
                 SuperDropdown {
                     id: darkRow
-                    y: 114
+                    y: rememberRow.y + rememberRow.height + 1
                     title: "Dark mode"
                     items: ["System", "Light", "Dark"]
                     currentIndex: 1
                 }
                 Row {
-                    y: 178
+                    y: darkRow.y + darkRow.height + 8
                     x: 16
                     spacing: 12
                     Button { type: "filled"; text: "OK"; width: 96; height: 40 }
@@ -154,7 +154,7 @@ Scaffold {
                 }
                 Slider {
                     id: volumeSlider
-                    y: 230
+                    y: darkRow.y + darkRow.height + 60
                     x: 16
                     width: parent.width - 32
                     height: 28

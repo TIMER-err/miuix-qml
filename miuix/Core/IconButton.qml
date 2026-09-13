@@ -54,11 +54,11 @@ Item {
             Behavior on opacity { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
         }
 
-        Text {
+        Icon {
             anchors.centerIn: parent
-            text: control.icon
-            font.family: Theme.iconFont.name
-            font.pixelSize: 24
+            name: control.icon
+            width: 24
+            height: 24
             color: contentColor
         }
     }

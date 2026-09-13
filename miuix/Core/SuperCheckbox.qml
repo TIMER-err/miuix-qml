@@ -1,75 +1,38 @@
 import QtQuick
-import QtQuick.Layouts
 import miuix.Core
+
 Item {
-    id: control
+    id: superCheckboxRoot
     property string title: ""
     property string summary: ""
     property bool checked: false
     property bool enabled: true
+    property bool indeterminate: false
     signal clicked()
+    width: parent ? parent.width : 320
+    implicitHeight: preference.implicitHeight
 
-    anchors.left: parent.left
-    anchors.right: parent.right
-    height: 56
-
-    Rectangle {
-        anchors.fill: parent
-        color: "#000000"
-        opacity: titleClick.pressed ? 0.10 : (titleClick.containsMouse ? 0.06 : 0)
-        Behavior on opacity { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+    function toggle() {
+        if (!superCheckboxRoot.enabled) return
+        superCheckboxRoot.checked = !superCheckboxRoot.checked
+        superCheckboxRoot.indeterminate = false
+        superCheckboxRoot.clicked()
     }
 
-    RowLayout {
+    BasicComponent {
+        id: preference
         anchors.fill: parent
-        anchors.leftMargin: 16
-        anchors.rightMargin: 16
-        spacing: 12
-
-        Checkbox {
-            Layout.alignment: Qt.AlignVCenter
-            Layout.preferredWidth: 26
-            Layout.preferredHeight: 26
-            checked: control.checked
-            toggleOnClick: false
-            enabled: control.enabled
-            onClicked: {
-                control.checked = !control.checked
-                control.clicked()
-            }
-        }
-
-        Item {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            MouseArea {
-                id: titleClick
-                anchors.fill: parent
-                enabled: control.enabled
-                hoverEnabled: true
-                onClicked: {
-                    control.checked = !control.checked
-                    control.clicked()
-                }
-            }
-            Column {
-                anchors.verticalCenter: parent.verticalCenter
-                width: parent.width
-                spacing: 2
-                Text {
-                    text: control.title
-                    font.pixelSize: 17
-                    font.weight: 57
-                    color: control.enabled ? Theme.color.onBackground : Theme.color.disabledOnSecondaryVariant
-                    width: parent.width
-                }
-                Text {
-                    text: control.summary
-                    visible: control.summary.length > 0
-                    font.pixelSize: 14
-                    color: Theme.color.onSurfaceVariantSummary
-                    width: parent.width
-                }
+        title: superCheckboxRoot.title
+        summary: superCheckboxRoot.summary
+        enabled: superCheckboxRoot.enabled
+        onClicked: superCheckboxRoot.toggle()
+        startAction: Component {
+            Checkbox {
+                checked: superCheckboxRoot.checked
+                indeterminate: superCheckboxRoot.indeterminate
+                toggleOnClick: false
+                enabled: superCheckboxRoot.enabled
+                onClicked: superCheckboxRoot.toggle()
             }
         }
     }
